@@ -8,13 +8,14 @@ using SettlementTracker.WebInterface.Data.Services;
 public class CitizenService : ICitizenService
 {
     private List<Citizen> _citizens = new();
-    private readonly string _filePath = "Data/citizens.json";
+    private readonly string _stateFilePath = "State/citizens.json";
+    private readonly string _definitionFilePath = "Data/populationDefinition.json";
     private readonly PopulationDefinition _definition;
 
     public CitizenService()
     {
         // Загружаем определение населения
-        var definitionJson = File.ReadAllText("Data/populationDefinition.json");
+        var definitionJson = File.ReadAllText(_definitionFilePath);
         _definition = JsonSerializer.Deserialize<PopulationDefinition>(definitionJson)
                       ?? new PopulationDefinition();
     }
@@ -67,15 +68,15 @@ public class CitizenService : ICitizenService
         var options = new JsonSerializerOptions { WriteIndented = true };
         var json = JsonSerializer.Serialize(_citizens, options);
 
-        Directory.CreateDirectory(Path.GetDirectoryName(_filePath)!);
-        await File.WriteAllTextAsync(_filePath, json);
+        Directory.CreateDirectory(Path.GetDirectoryName(_stateFilePath)!);
+        await File.WriteAllTextAsync(_stateFilePath, json);
     }
 
     public async Task LoadFromFileAsync()
     {
-        if (File.Exists(_filePath))
+        if (File.Exists(_stateFilePath))
         {
-            var json = await File.ReadAllTextAsync(_filePath);
+            var json = await File.ReadAllTextAsync(_stateFilePath);
             var citizens = JsonSerializer.Deserialize<List<Citizen>>(json) ?? new List<Citizen>();
 
             foreach (var citizen in citizens)
