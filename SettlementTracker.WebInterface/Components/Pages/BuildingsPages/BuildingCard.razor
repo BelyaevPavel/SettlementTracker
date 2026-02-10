@@ -1,11 +1,76 @@
 ﻿@using BlazorBootstrap
+@using SettlementTracker.Core.Models.Definitions
+@using SettlementTracker.Core.Models.Entities
+@using SettlementTracker.WebInterface.Data.Services
 
-<Card Class="mb-4" Style="width:18rem;">
-    <img class="rounded-top" src="/images/placeholder.png" alt="placeholder" />
-    <CardBody>
-        <CardTitle>Card title</CardTitle>
-        <CardSubTitle Class="mb-2 text-muted">Card subtitle</CardSubTitle>
-        <CardText>Some quick example text to build on the card title and make up the bulk of the card's content.</CardText>
-        <Button Color="ButtonColor.Primary" To="#" Type="ButtonType.Link">Go somewhere</Button>
-    </CardBody>
-</Card>
+@inject IBuildingService BuildingService
+
+@rendermode InteractiveServer
+
+@if (_building != null)
+{
+    <Card Class="col-md-3 col-sm-6 col-sx-12 mb-4">
+        <img class="rounded-top" src="/images/@_building.Definition.PictureName" alt="placeholder"/>
+        <CardBody>
+            <CardTitle>@_building.Definition.Name</CardTitle>
+            <CardSubTitle Class="mb-2 text-muted">Стоимость постройки 20 древесины</CardSubTitle>
+            <CardText>
+                @_building.Definition.Description
+            </CardText>
+            <Button Color="ButtonColor.Danger" @onclick="@(() => DemolishButtonHandler.Invoke(_building.Id))">Снести</Button>
+        </CardBody>
+    </Card>
+}
+else
+{
+    @if (_buildingDefinition != null)
+    {
+        <Card Class="col-md-3 col-sm-6 col-sx-12 mb-4">
+            <img class="rounded-top" src="/images/@_buildingDefinition.PictureName" alt="placeholder"/>
+            <CardBody>
+                <CardTitle>@_buildingDefinition.Name</CardTitle>
+                <CardSubTitle Class="mb-2 text-muted">Стоимость постройки 20 древесины</CardSubTitle>
+                <CardText>
+                    @_buildingDefinition.Description
+                </CardText>
+                <Button Color="ButtonColor.Primary" @onclick="@(() => BuildButtonHandler.Invoke(_buildingDefinition.Id))">Построить</Button>
+            </CardBody>
+        </Card>
+    }
+    else
+    {
+        <Card Class="col-xs-12 col-sm-6 col-md-3 mb-4">
+            <img class="rounded-top" src="/images/Вонючая яма.png" alt="placeholder"/>
+            <CardBody>
+                <CardTitle>Кислый жабий пруд</CardTitle>
+                <CardSubTitle Class="mb-2 text-muted">Стоимость постройки 20 древесины</CardSubTitle>
+                <CardText>
+                    Игроки получают яд, 1д4 ко всем броскам атаки или любое другое применение.
+                    Позволяет взять опыт "Маленький принц и роза"
+                </CardText>
+                <Button Color="ButtonColor.Primary">Построить</Button>
+                <Button Color="ButtonColor.Danger">Снести</Button>
+            </CardBody>
+        </Card>
+    }
+}
+
+@code
+{
+    [Parameter] public Building? _building { get; set; }
+    [Parameter] public BuildingDefinition? _buildingDefinition { get; set; }
+
+    [Parameter] public Func<string, Task> BuildButtonHandler { get; set; }
+    [Parameter] public Func<Guid, Task> DemolishButtonHandler { get; set; }
+
+
+    private Task Build()
+    {
+        return BuildingService.BuildAsync(_buildingDefinition.Id, (0, 0));
+    }
+
+    private Task Demolish()
+    {
+        return BuildingService.DemolishAsync(_building.Id);
+    }
+}
