@@ -1,0 +1,39 @@
+﻿@using BlazorBootstrap;
+
+<Sidebar2 @ref="_sidebar"
+          Href="/"
+          ImageSrc="https://demos.blazorbootstrap.com/images/logo/logo-white.svg"
+          Title="SettlementTracker"
+          BadgeText="0.0.1"
+          DataProvider="Sidebar2DataProvider"
+          WidthUnit="Unit.Px"/>
+
+@code {
+    private Sidebar2 _sidebar = default!;
+
+    private IEnumerable<NavItem> navItems = default!;
+
+    private async Task<Sidebar2DataProviderResult> Sidebar2DataProvider(Sidebar2DataProviderRequest request)
+    {
+        if (navItems is null)
+            navItems = GetNavItems();
+
+        return await Task.FromResult(request.ApplyTo(navItems));
+    }
+
+    private IEnumerable<NavItem> GetNavItems()
+    {
+        navItems = new List<NavItem>
+        {
+            new NavItem { Id = "1", Href = "/", IconName = IconName.HouseDoorFill, Text = "Home", Match = NavLinkMatch.All },
+            new NavItem { Id = "2", Href = "/citizens", IconName = IconName.PersonFill, Text = "Горожанe" },
+            new NavItem { Id = "3", Href = "/buildings", IconName = IconName.House, Text = "Здания" },
+        };
+
+        return navItems;
+    }
+    
+    
+
+    public void ToggleSidebar() => _sidebar.ToggleSidebar();
+}

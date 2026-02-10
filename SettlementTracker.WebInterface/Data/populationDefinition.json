@@ -1,0 +1,14 @@
+{
+  "id": "default",
+  "name": "Население",
+  "description": "Настройки населения",
+  "childMaxAge": 14,
+  "adultMaxAge": 59,
+  "elderMaxAge": 80,
+  "agePerDay": 0.00273972602739726,
+  "dailyNeeds": [],
+  "starvationDeathChance": 0.1,
+  "slaveEfficiencyPenalty": 0.5,
+  "childEfficiencyPenalty": 0.5,
+  "elderEfficiencyPenalty": 0.7
+}

@@ -1,0 +1,552 @@
+﻿@page "/citizens"
+@using SettlementTracker.Core.Models.Entities
+@using SettlementTracker.Core.Models.Enums
+@using SettlementTracker.WebInterface.Data.Services
+@using BlazorBootstrap;
+
+@inject ICitizenService CitizenService
+
+@rendermode InteractiveServer
+
+<PageTitle>Горожанe - Settlement Tracker</PageTitle>
+
+<h1>Управление горожанами</h1>
+
+<Progress Class="mb-3">
+    <ProgressBar Color="ProgressColor.Info" Width="@childRatio"/>
+    <ProgressBar Color="ProgressColor.Success" Width="@adultRatio"/>
+    <ProgressBar Color="ProgressColor.Warning" Width="@elderRatio"/>
+    <ProgressBar Color="ProgressColor.Danger" Width="@slaveRatio"/>
+</Progress>
+
+<Progress Class="mb-3">
+    <ProgressBar Color="ProgressColor.Info" Width="@maleRatio"/>
+    <ProgressBar Color="ProgressColor.Success" Width="@(1 - maleRatio)"/>
+</Progress>
+
+<div class="mb-3">
+    <button class="btn btn-primary" @onclick="AddNewCitizen">
+        <Icon Name="IconName.PersonPlusFill"></Icon> Добавить горожанина
+    </button>
+    <button class="btn btn-primary" @onclick="OpenGenerationForm">
+        <Icon Name="IconName.PersonPlusFill"></Icon> Сгенерировать горожан
+    </button>
+</div>
+
+@if (_citizens == null)
+{
+    <p>
+        <em>Загрузка...</em>
+    </p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead class="table-dark">
+            <tr>
+                <th>Имя</th>
+                <th>Пол</th>
+                <th>Возраст</th>
+                <th>Категория</th>
+                <th>Раб</th>
+                <th>Статус работы</th>
+                <th>Эффективность</th>
+                <th>Действия</th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var citizen in _citizens)
+            {
+                <tr>
+                    <td>@citizen.Name</td>
+                    <td>@GetGenderDisplay(citizen.Gender)</td>
+                    <td>@citizen.Age.ToString("F1") лет</td>
+                    <td>
+                        <span class="badge @GetAgeCategoryBadge(citizen.AgeCategory)">
+                            @GetAgeCategoryDisplay(citizen.AgeCategory)
+                        </span>
+                    </td>
+                    <td>
+                        @if (citizen.IsSlave)
+                        {
+                            <Badge Color="BadgeColor.Danger">Да</Badge>
+                        }
+                        else
+                        {
+                            <Badge Color="BadgeColor.Success">Нет</Badge>
+                        }
+                    </td>
+                    <td>@GetWorkStatusDisplay(citizen.WorkStatus)</td>
+                    <td>@citizen.CurrentEfficiency.ToString("P0")</td>
+                    <td>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <Button Color="ButtonColor.Primary" Outline="true" @onclick="() => EditCitizen(citizen)">
+                                <Icon Name="IconName.Pencil"></Icon>
+                            </Button>
+                            <Button Color="ButtonColor.Danger" Outline="true" @onclick="() => DeleteCitizen(citizen)">
+                                <Icon Name="IconName.Trash"></Icon>
+                            </Button>
+                        </div>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (_showEditDialog)
+{
+    <div class="modal show d-block" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        @(_editingCitizen.Id == Guid.Empty ? "Новый горожанин" : "Редактирование горожанина")
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CloseEditDialog"></button>
+                </div>
+                <div class="modal-body">
+                    <form>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Имя</label>
+                                <input type="text" class="form-control" @bind="_editingCitizen.Name"/>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Пол</label>
+                                <select class="form-select" @bind="_editingCitizen.Gender">
+                                    <option value="@Gender.Male">Мужской</option>
+                                    <option value="@Gender.Female">Женский</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Возраст (лет)</label>
+                                <input type="number" step="0.1" class="form-control"
+                                       @bind="_editingCitizen.Age"/>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Статус работы</label>
+                                <select class="form-select" @bind="_editingCitizen.WorkStatus">
+                                    @foreach (WorkStatus status in Enum.GetValues(typeof(WorkStatus)))
+                                    {
+                                        <option value="@status">@GetWorkStatusDisplay(status)</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3 d-flex align-items-end">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox"
+                                           @bind="_editingCitizen.IsSlave"/>
+                                    <label class="form-check-label">Раб</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">ID здания/задания</label>
+                                <input type="text" class="form-control"
+                                       @bind="_editingCitizen.AssignedToId"/>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Тип назначения</label>
+                                <input type="text" class="form-control"
+                                       @bind="_editingCitizen.AssignedToType"/>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseEditDialog">
+                        Отмена
+                    </button>
+                    <button type="button" class="btn btn-primary" @onclick="SaveCitizen">
+                        Сохранить
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_showGenerateDialog)
+{
+    <div class="modal show d-block" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        Сгенерировать новых горожан
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CloseGenerationForm"></button>
+                </div>
+                <div class="modal-body">
+                    <form>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Раса</label>
+                                <select class="form-select" @bind="_generationRace">
+                                    <option value="Goblin">Гоблины</option>
+                                    <option value="Human">Люди</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Пол</label>
+                                <select class="form-select" @bind="_generationGender">
+                                    <option value="@Gender.Male">Мужской</option>
+                                    <option value="@Gender.Female">Женский</option>
+                                    <option value="@Gender.Any">Случайный</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Возраст</label>
+                                <select class="form-select" @bind="_generationAgeCategory">
+                                    <option value="@AgeCategory.Child">Дети</option>
+                                    <option value="@AgeCategory.Adult">Взрослые</option>
+                                    <option value="@AgeCategory.Elder">Старики</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3 d-flex align-items-end">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox"
+                                           @bind="_generationIsSlave"/>
+                                    <label class="form-check-label">Рабы</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Количество</label>
+                                <input type="number" step="1" class="form-control"
+                                       @bind="_generationAmount"/>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseGenerationForm">
+                        Отмена
+                    </button>
+                    <Button Color="ButtonColor.Primary" @onclick="GenerateCitizens">
+                        Сгенерировать @(_generationRace == "Goblin" ? "гоблинов" : "людей")
+                    </Button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    Random _random;
+    private IEnumerable<Citizen>? _citizens;
+    private bool _showEditDialog = false;
+    private bool _showGenerateDialog = false;
+    private Citizen _editingCitizen = new(Guid.NewGuid(), "", Gender.Male, 0);
+
+    private float childRatio;
+    private float adultRatio;
+    private float elderRatio;
+    private float slaveRatio;
+    private float maleRatio;
+
+    private Gender _generationGender;
+    private string _generationRace = "Goblin";
+    private AgeCategory _generationAgeCategory;
+    private bool _generationIsSlave;
+    private int _generationAmount = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        CitizenService.CitizensChange += OnCitizensChanged;
+
+        await CitizenService.LoadFromFileAsync();
+        _citizens = await CitizenService.GetCitizensAsync();
+        _random = new(DateTime.Now.Millisecond);
+
+        UpdateStatistics();
+    }
+
+    private void OnCitizensChanged(object? sender, EventArgs e)
+    {
+        UpdateStatistics();
+    }
+
+    private void UpdateStatistics()
+    {
+        if (_citizens == null)
+        {
+            return;
+        }
+
+        var freeCitizens = _citizens.Where(x => !x.IsSlave);
+
+        float citizensCount = _citizens.Count();
+        childRatio = freeCitizens.Count(x => x.AgeCategory == AgeCategory.Child) / citizensCount * 100;
+        adultRatio = freeCitizens.Count(x => x.AgeCategory == AgeCategory.Adult) / citizensCount * 100;
+        elderRatio = freeCitizens.Count(x => x.AgeCategory == AgeCategory.Elder) / citizensCount * 100;
+        slaveRatio = (citizensCount - freeCitizens.Count()) / citizensCount * 100;
+        maleRatio = _citizens.Count(x => x.Gender == Gender.Male) / citizensCount * 100;
+    }
+
+    private void AddNewCitizen()
+    {
+        _editingCitizen = new Citizen(Guid.Empty, "", Gender.Male, 0);
+        _showEditDialog = true;
+    }
+
+
+    private void EditCitizen(Citizen citizen)
+    {
+        // Создаем копию для редактирования
+        _editingCitizen = new Citizen(citizen.Id, citizen.Name, citizen.Gender, citizen.Age, citizen.IsSlave)
+        {
+            WorkStatus = citizen.WorkStatus,
+            AssignedToId = citizen.AssignedToId,
+            AssignedToType = citizen.AssignedToType,
+            GuardianId = citizen.GuardianId,
+            CurrentEfficiency = citizen.CurrentEfficiency
+        };
+        _showEditDialog = true;
+    }
+
+    private async Task SaveCitizen()
+    {
+        if (_editingCitizen.Id == Guid.Empty)
+        {
+            await CitizenService.AddCitizenAsync(_editingCitizen);
+        }
+        else
+        {
+            await CitizenService.UpdateCitizenAsync(_editingCitizen);
+        }
+
+        _citizens = await CitizenService.GetCitizensAsync();
+        CloseEditDialog();
+    }
+
+    private async Task DeleteCitizen(Citizen citizen)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", $"Удалить горожанина {citizen.Name}?"))
+        {
+            await CitizenService.DeleteCitizenAsync(citizen.Id);
+            _citizens = await CitizenService.GetCitizensAsync();
+        }
+    }
+
+    private void CloseEditDialog()
+    {
+        _showEditDialog = false;
+    }
+
+    private void OpenGenerationForm()
+    {
+        _showGenerateDialog = true;
+    }
+
+    private void CloseGenerationForm()
+    {
+        _showGenerateDialog = false;
+    }
+
+    private async Task GenerateCitizens()
+    {
+        for (int i = 0; i < _generationAmount; i++)
+        {
+            Citizen generatedCitizen = GenerateCitizen();
+            await CitizenService.AddCitizenAsync(generatedCitizen);
+        }
+
+        _citizens = await CitizenService.GetCitizensAsync();
+    }
+
+    private Citizen GenerateCitizen()
+    {
+        Gender gender = GenerateGender();
+        string name = _generationRace == "Goblin" ? GenerateGoblinName(gender) : GenerateHumanName(gender);
+        float age = GenerateAge();
+        return new Citizen(Guid.Empty, name, gender, age, _generationIsSlave);
+    }
+
+    private string GenerateHumanName(Gender gender)
+    {
+        // Европейские средневековые имена для людей (кириллицей)
+        List<string> _humanMaleNames = new()
+        {
+            "Артур", "Ричард", "Генрих", "Эдвард", "Вильгельм", "Роланд", "Ланселот", "Гарет",
+            "Персиваль", "Боромир", "Арагорн", "Теоден", "Эомер", "Фарамир", "Боромир",
+            "Джеральт", "Тристан", "Гавейн", "Бедуир", "Константин", "Леонид", "Владислав",
+            "Сигурд", "Рагнар", "Бьёрн", "Ивар", "Харальд", "Олаф", "Эрик", "Лейф",
+            "Роберт", "Филипп", "Людовик", "Карл", "Отто", "Фридрих", "Альбрехт", "Готфрид",
+            "Балдуин", "Раймунд", "Годфри", "Танкред", "Боэмунд", "Роджер", "Уильям",
+            "Джеффри", "Хьюго", "Симон", "Питер", "Майкл", "Стивен", "Томас", "Джон"
+        };
+
+        List<string> _humanFemaleNames = new()
+        {
+            "Гвиневра", "Моргана", "Эльза", "Бриенна", "Катерина", "Игрейн", "Элейна",
+            "Ровена", "Сигрид", "Фрейя", "Астрид", "Ингеборга", "Хельга", "Брунгильда",
+            "Кримхильда", "Изольда", "Эльфрида", "Матильда", "Аделина", "Беатрис",
+            "Маргарита", "Элеонора", "Констанция", "Агнес", "Алиенора", "Анна", "Берта",
+            "Сесилия", "Эдит", "Эмма", "Хильда", "Ида", "Луиза", "Мэри", "Одилия",
+            "Розамунда", "Урсула", "Вильгельмина", "Иоланда", "Жозефина", "Клотильда",
+            "Леонора", "Офелия", "Регина", "Селина", "Татьяна", "Ульяна", "Флора",
+            "Хильдегарда", "Юдифь"
+        };
+
+        // Европейские средневековые фамилии/прозвища (кириллицей)
+        List<string> _humanMaleNicknames = new()
+        {
+            "Львиное Сердце", "Молот", "Железная Рука", "Стальной Кулак", "Медведь", "Медвежья Лапа", "Волк",
+            "Орел", "Сокол", "Ворон", "Змей", "Дракон", "Единорог", "Грифон", "Феникс", "Храбрый", "Мудрый",
+            "Справедливый", "Благородный", "Святой", "Победитель", "Великий", "Добрый", "Грозный", "Безземельный",
+            "Короткий", "Длинный", "Рыжый", "Черный", "Белый", "Серый", "Кривой", "Хромой", "Однорукий", "Одноглазый",
+            "Остроглазый", "Быстрый", "Железный", "Стальной", "Каменный", "Деревянный", "Золотой", "Серебряный",
+            "Медный", "Бронзовый", "Огненный", "Ледяной", "Водный", "Воздушный", "Земной", "Небесный", "Подземный",
+            "Морской", "Речной", "Лесной", "Горный", "Равнинный", "Пустынный", "Болотный", "Темный", "Светлый",
+            "Красный", "Синий", "Зеленый", "Желтый", "Багровый", "Завоеватель", "Бородатый", "Алый"
+        };
+
+        List<string> _humanFemaleNicknames = new()
+        {
+            "Львиное Сердце", "Молот", "Железная Рука", "Стальной Кулак", "Медведь", "Медвежья Лапа", "Волк",
+            "Орел", "Сокол", "Ворон", "Змей", "Дракон", "Единорог", "Грифон", "Феникс", "Храбрая", "Мудрая",
+            "Справедливая", "Благородная", "Святая", "Победительница", "Великая", "Добрая", "Грозная", "Безземельная",
+            "Короткая", "Длинная", "Рыжая", "Черная", "Белая", "Серая", "Кривая", "Хромая", "Однорукая", "Одноглазая",
+            "Остроглазая", "Быстрая", "Железная", "Стальная", "Каменная", "Деревянная", "Золотая", "Серебряная",
+            "Медная", "Бронзовая", "Огненная", "Ледяная", "Водная", "Воздушная", "Земная", "Небесная", "Подземная",
+            "Морская", "Речная", "Лесная", "Горная", "Равнинная", "Пустынная", "Болотная", "Темная", "Светлая",
+            "Красная", "Синяя", "Зеленая", "Желтая", "Багровая", "Завоевательница", "Бородатая", "Алая"
+        };
+
+        if (gender == Gender.Male)
+        {
+            return String.Format("{0} {1}", _humanMaleNames[_random.Next(_humanFemaleNames.Count)], _humanMaleNicknames[_random.Next(_humanMaleNicknames.Count)]);
+        }
+        else
+        {
+            return String.Format("{0} {1}", _humanFemaleNames[_random.Next(_humanFemaleNames.Count)], _humanFemaleNicknames[_random.Next(_humanFemaleNicknames.Count)]);
+        }
+    }
+
+    private string GenerateGoblinName(Gender gender)
+    {
+        List<string> _goblinMaleNames = new()
+        {
+            "Гнэш", "Зуб", "Коготь", "Шнырь", "Грыз", "Скрип", "Хрясь", "Тявк", "Шмыг",
+            "Гризз", "Клек", "Шурш", "Хват", "Цап", "Грак", "Шип", "Крут", "Лизун",
+            "Плюх", "Тух", "Вжик", "Бульк", "Хряп", "Щелк", "Чмок", "Фырк", "Хрюк",
+            "Ух", "Ах", "Ох"
+        };
+
+        List<string> _goblinFemaleNames = new()
+        {
+            "Зубастик", "Когтиха", "Шныриха", "Грызка", "Скрипуха", "Хряська", "Тявка",
+            "Шмыга", "Гризза", "Клека", "Шуршиха", "Хватиха", "Цапа", "Грака", "Шипиха",
+            "Крутиха", "Лизуха", "Плюха", "Туха", "Вжика", "Булька", "Хряпа", "Щелка",
+            "Чмока", "Фырка", "Хрюка", "Уха", "Аха", "Оха", "Иха"
+        };
+
+        List<string> _goblinClanNames = new()
+        {
+            "из Зуборезов", "из Когтегрызов", "из Гнилобрюхов", "из Смердевов", "из Тухлозадов", "из Глиноедов",
+            "из Червяков", "из Паучьих", "из Грибных", "из Плесеней", "из Болотных", "из Грязных", "из Вшивых",
+            "из Блохастых", "из Камнегрызов", "из Железозубов", "из Остроухов", "из Длиннохвостов", "из Кривоногов",
+            "из Косоглазов", "из Толстобрюхов", "из Вонючек", "из Сопливых", "из Гнойных", "из Чешуйчатых"
+        };
+
+        List<string> _goblinMaleTitles = new()
+        {
+            "Вонючий", "Прыткий", "Хитрый", "Злой", "Жадный", "Грязный", "Быстрый",
+            "Тупой", "Острый", "Мокрый", "Сухой", "Голодный", "Сытый", "Ленивый",
+            "Рабочий", "Воинственный", "Трусливый", "Храбрый", "Малый", "Большой"
+        };
+
+        List<string> _goblinFemaleTitles = new()
+        {
+            "Вонючка", "Прыгунья", "Плутовка", "Злюка", "Жадюга", "Грязнуля", "Стремительная",
+            "Тупица", "Острячка", "Мокрушка", "Сухарка", "Прожора", "Объевшаяся", "Лентяйка",
+            "Трудяга", "Воинственная", "Трусиха", "Смельчак", "Крошка", "Великанша"
+        };
+
+
+        if (gender == Gender.Male)
+        {
+            return String.Format("{0} {1} {2}", _goblinMaleTitles[_random.Next(_goblinMaleTitles.Count)], _goblinMaleNames[_random.Next(_goblinMaleNames.Count)], _goblinClanNames[_random.Next(_goblinClanNames.Count)]);
+        }
+        else
+        {
+            return String.Format("{0} {1} {2}", _goblinFemaleTitles[_random.Next(_goblinFemaleTitles.Count)], _goblinFemaleNames[_random.Next(_goblinFemaleNames.Count)], _goblinClanNames[_random.Next(_goblinClanNames.Count)]);
+        }
+    }
+
+    private Gender GenerateGender()
+    {
+        if (_generationGender == Gender.Any)
+        {
+            return _random.Next(100) < 50 ? Gender.Male : Gender.Female;
+        }
+
+        return _generationGender == Gender.Male ? Gender.Male : Gender.Female;
+    }
+
+    private float GenerateAge()
+    {
+        return _random.Next(60);
+    }
+
+
+    private string GetGenderDisplay(Gender gender)
+    {
+        return gender switch
+        {
+            Gender.Male => "♂ Мужской",
+            Gender.Female => "♀ Женский",
+            _ => gender.ToString()
+        };
+    }
+
+    private string GetAgeCategoryDisplay(AgeCategory category)
+    {
+        return category switch
+        {
+            AgeCategory.Child => "Ребенок",
+            AgeCategory.Adult => "Взрослый",
+            AgeCategory.Elder => "Пожилой",
+            _ => category.ToString()
+        };
+    }
+
+    private string GetAgeCategoryBadge(AgeCategory category)
+    {
+        return category switch
+        {
+            AgeCategory.Child => "bg-info",
+            AgeCategory.Adult => "bg-success",
+            AgeCategory.Elder => "bg-warning",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetWorkStatusDisplay(WorkStatus status)
+    {
+        return status switch
+        {
+            WorkStatus.Idle => "📝 Без дела",
+            WorkStatus.AssignedToBuilding => "🔨 Приписан к зданию",
+            WorkStatus.AssignedToJob => "🔨 На задании",
+            WorkStatus.Caretaker => "Присматривает",
+            _ => status.ToString()
+        };
+    }
+
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+}

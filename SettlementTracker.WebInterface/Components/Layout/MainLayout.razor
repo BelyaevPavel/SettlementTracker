@@ -1,0 +1,32 @@
+﻿@inherits LayoutComponentBase
+
+@using BlazorBootstrap
+
+<BlazorBootstrapLayout StickyHeader="true">
+    <HeaderSection>
+        <Icon Name="IconName.List" role="button" @onclick="@(() => _navMenu.ToggleSidebar())"/>
+        <ThemeSwitcher Class="ps-3 ps-lg-2"/>
+    </HeaderSection>
+
+    <SidebarSection>
+        <NavMenu @ref="_navMenu"/>
+    </SidebarSection>
+    <ContentSection>
+        @Body
+    </ContentSection>
+
+    <FooterSection>
+        @* Footer links... *@
+    </FooterSection>
+</BlazorBootstrapLayout>
+
+@code
+{
+    NavMenu _navMenu = default!;
+}
+
+<div id="blazor-error-ui">
+    An unhandled error has occurred.
+    <a href="" class="reload">Reload</a>
+    <a class="dismiss">🗙</a>
+</div>
