@@ -1,0 +1,111 @@
+[  
+  {
+    "id": "thinking_tent",
+    "name": "Думательная палатка",
+    "iconName": "Думательная палатка.png",
+    "pictureName": "Думательная палатка.png",
+    "description": "Возможность получения оружия/брони 2 тира (оговоренного мастером), постройка сложных ловушек и проведение исследований. Позволяет взять опыт \"Гаденькие ублюдки\"",
+    "size": {
+      "width": 3,
+      "height": 3
+    },
+    "buildCost": [
+      {
+        "resourceId": "wood",
+        "amount": 30,
+        "isProduction": false
+      }
+    ],
+    "dailyEffects": [
+      {
+        "resourceId": "research",
+        "amount": 1,
+        "isProduction": true
+      }
+    ],
+    "workerRequirements": [
+      {
+        "ageCategory": 1,
+        "gender": 0,
+        "count": 1,
+        "canBeSlave": false,
+        "requiresSupervision": false
+      },
+      {
+        "ageCategory": 1,
+        "gender": 1,
+        "count": 1,
+        "canBeSlave": false,
+        "requiresSupervision": false
+      }
+    ],
+    "maxWorkers": 3,
+    "providesHousing": 0
+  },  
+  {
+    "id": "acid_frog_pond",
+    "name": "Кислый жабий пруд",
+    "iconName": "кислый жабий пруд.png",
+    "pictureName": "кислый жабий пруд.png",
+    "description": "Игроки получают яд, 1д4 ко всем броскам атаки или любое другое применение. Позволяет взять опыт \"Маленький принц и роза\"",
+    "size": {
+      "width": 3,
+      "height": 3
+    },
+    "buildCost": [
+      {
+        "resourceId": "wood",
+        "amount": 20,
+        "isProduction": false
+      }
+    ],
+    "dailyEffects": [
+      {
+        "resourceId": "poison",
+        "amount": 1,
+        "isProduction": true
+      }
+    ],
+    "workerRequirements": [
+      {
+        "ageCategory": 1,
+        "gender": 1,
+        "count": 1,
+        "canBeSlave": true,
+        "requiresSupervision": true
+      }
+    ],
+    "maxWorkers": 2,
+    "providesHousing": 0
+  },
+  {
+    "id": "slave_pen",
+    "name": "Загон для рабов",
+    "iconName": "Загон для рабов.png",
+    "pictureName": "Загон для рабов.png",
+    "description": "Позволяет содержать до 15 рабов. Позволяет взять опыт \"Не Джанго освобожденный\"",
+    "size": {
+      "width": 5,
+      "height": 4
+    },
+    "buildCost": [
+      {
+        "resourceId": "wood",
+        "amount": 5,
+        "isProduction": false
+      }
+    ],
+    "dailyEffects": [],
+    "workerRequirements": [
+      {
+        "ageCategory": 1,
+        "gender": 0,
+        "count": 2,
+        "canBeSlave": false,
+        "requiresSupervision": false
+      }
+    ],
+    "maxWorkers": 2,
+    "providesHousing": 15
+  }
+]
