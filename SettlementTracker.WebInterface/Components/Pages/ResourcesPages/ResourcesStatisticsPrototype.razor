@@ -1,0 +1,152 @@
+﻿@rendermode InteractiveServer
+@using BlazorBootstrap
+
+<Offcanvas @ref="_offcanvas"
+           title="Ресурсы">
+    <HeaderTemplate>
+        <div class="d-flex justify-content-between align-items-center w-100">
+            <h5 class="mb-0">📊 Статистика ресурсов</h5>
+            <button type="button" class="btn-close" @onclick="HideAsync"></button>
+        </div>
+    </HeaderTemplate>
+    <BodyTemplate>
+        <div class="container-fluid">
+            <!-- Заголовок колонок (скрыт на мобильных) -->
+            <div class="row fw-bold d-none d-md-flex mb-2">
+                <div class="col-4">Ресурс</div>
+                <div class="col-2 text-end">Кол-во</div>
+                <div class="col-2 text-end">Изм.</div>
+                <div class="col-2 text-end">Дней запаса</div>
+                <div class="col-2 text-end">Действия</div>
+            </div>
+
+            @foreach (var resource in _mockResources)
+            {
+            <div class="row align-items-center mb-3 border-bottom pb-2">
+                <!-- Название и иконка -->
+                <div class="col-12 col-md-4">
+                    <i class="bi @resource.Icon me-2"></i>
+                    <span class="fw-bold">@resource.Name</span>
+                </div>
+
+                <!-- Текущее количество -->
+                <div class="col-6 col-md-2 text-start text-md-end">
+                    <span class="fs-5">@resource.CurrentAmount</span>
+                </div>
+
+                <!-- Изменение на следующий день -->
+                <div class="col-6 col-md-2 text-start text-md-end">
+                    @if (resource.DailyChange > 0)
+                    {
+                    <span class="text-success">
+                                <i class="bi bi-arrow-up"></i> +@resource.DailyChange
+                            </span>
+                    }
+                    else if (resource.DailyChange < 0)
+                    {
+                    <span class="text-danger">
+                                <i class="bi bi-arrow-down"></i> @resource.DailyChange
+                            </span>
+                    }
+                    else
+                    {
+                    <span class="text-muted">
+                                <i class="bi bi-dash"></i> 0
+                            </span>
+                    }
+                </div>
+
+                <!-- Дней запаса -->
+                <div class="col-6 col-md-2 text-start text-md-end">
+                    @if (resource.DailyChange < 0)
+                    {
+                    var days = (int)Math.Floor(resource.CurrentAmount / Math.Abs(resource.DailyChange));
+                    <span class="@(days < 3 ? "text-danger fw-bold" : "")">@days дн.</span>
+                    }
+                    else
+                    {
+                    <span class="text-muted">∞</span>
+                    }
+                </div>
+
+                <!-- Кнопки ручного изменения -->
+                <div class="col-6 col-md-2 text-end">
+                    <Button Size="ButtonSize.Small" Color="ButtonColor.Success"
+                            @onclick="() => Increment(resource.Id)">
+                        <i class="bi bi-plus"></i>
+                    </Button>
+                    <Button Size="ButtonSize.Small" Color="ButtonColor.Danger"
+                            class="ms-1" @onclick="() => Decrement(resource.Id)">
+                        <i class="bi bi-dash"></i>
+                    </Button>
+                </div>
+            </div>
+            }
+
+            <!-- Пояснение -->
+            <div class="small text-muted mt-3">
+                <i class="bi bi-info-circle"></i> Дней запаса рассчитано при сохранении текущего изменения.
+            </div>
+        </div>
+    </BodyTemplate>
+</Offcanvas>
+
+@code {
+    private Offcanvas _offcanvas = default!;
+
+    public EventCallback OnShown { get; set; }
+
+    private async Task OnShowOffcanvasClick() => await _offcanvas.ShowAsync();
+
+    private async Task OnHideOffcanvasClick() => await _offcanvas.HideAsync();
+    
+    private List<MockResource> _mockResources = new()
+    {
+        new() { Id = "wood", Name = "Древесина", Icon = "bi-tree", CurrentAmount = 120, DailyChange = -8 },
+        new() { Id = "stone", Name = "Камень", Icon = "bi-gem", CurrentAmount = 75, DailyChange = -3 },
+        new() { Id = "food", Name = "Еда", Icon = "bi-basket", CurrentAmount = 60, DailyChange = -12 },
+        new() { Id = "water", Name = "Вода", Icon = "bi-droplet", CurrentAmount = 40, DailyChange = -5 },
+        new() { Id = "tools", Name = "Инструменты", Icon = "bi-wrench", CurrentAmount = 25, DailyChange = 2 },
+    };
+
+    public async Task ShowAsync()
+    {
+        // await LoadStatisticsAsync();
+        await _offcanvas.ShowAsync();
+        await OnShown.InvokeAsync();
+    }
+
+    public async Task HideAsync()
+    {
+        await _offcanvas.HideAsync();
+    }
+
+
+    private async Task LoadStatisticsAsync()
+    {
+        throw new NotImplementedException();
+    }
+    
+    private void Increment(string resourceId)
+    {
+        var resource = _mockResources.FirstOrDefault(r => r.Id == resourceId);
+        if (resource != null)
+            resource.CurrentAmount += 1;
+    }
+
+    private void Decrement(string resourceId)
+    {
+        var resource = _mockResources.FirstOrDefault(r => r.Id == resourceId);
+        if (resource != null && resource.CurrentAmount >= 1)
+            resource.CurrentAmount -= 1;
+    }
+    
+    private class MockResource
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string Icon { get; set; } = string.Empty;
+        public float CurrentAmount { get; set; }
+        public float DailyChange { get; set; }
+    }
+}

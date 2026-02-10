@@ -1,0 +1,85 @@
+﻿@page "/buildings_alt"
+
+@using BlazorBootstrap
+@using SettlementTracker.Core.Models.Definitions
+@using SettlementTracker.Core.Models.Entities
+@using SettlementTracker.Core.Services
+
+@inject IBuildingService BuildingService
+
+@rendermode InteractiveServer
+
+<PageTitle>Здания - Settlement Tracker</PageTitle>
+
+<h1>Управление зданиями</h1>
+
+<div class="row">
+    @if (_builtBuildings != null)
+    {
+        @foreach (var building in _builtBuildings)
+        {
+            <Card Class="col-lg-3 col-md-4 col-sm-6 col-xs-12 mb-4">
+                <img class="rounded-top" src="/images/@building.Definition.PictureName" alt="placeholder"/>
+                <CardBody>
+                    <CardTitle>@building.Definition.Name</CardTitle>
+                    <CardSubTitle Class="mb-2 text-muted">Стоимость постройки 20 древесины</CardSubTitle>
+                    <CardText>
+                        @building.Definition.Description
+                    </CardText>
+                </CardBody>
+                <CardFooter>
+                    <Button Color="ButtonColor.Danger" @onclick="@(() => Demolish(building.Id))">Снести</Button>
+                </CardFooter>
+            </Card>
+        }
+    }
+    @if (_availableDefinitions != null)
+    {
+        @foreach (var definition in _availableDefinitions)
+        {
+            <Card Class="col-lg-3 col-md-4 col-sm-6 col-xs-12 mb-4">
+                <img class="rounded-top" src="/images/@definition.PictureName" alt="placeholder"/>
+                <CardBody>
+                    <CardTitle>@definition.Name</CardTitle>
+                    <CardSubTitle Class="mb-2 text-muted">Стоимость постройки 20 древесины</CardSubTitle>
+                    <CardText>
+                        @definition.Description
+                    </CardText>
+                </CardBody>
+                <CardFooter>
+                    <Button Color="ButtonColor.Primary" @onclick="@(() => Build(definition.Id))">Построить</Button>
+                </CardFooter>
+            </Card>
+        }
+    }
+</div>
+
+@code {
+    private IEnumerable<Building>? _builtBuildings;
+    private IEnumerable<BuildingDefinition>? _availableDefinitions;
+    private bool _showAlreadyBuilt = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        await BuildingService.LoadFromFileAsync();
+        _builtBuildings = await BuildingService.GetBuiltBuildingsAsync();
+        _availableDefinitions = await BuildingService.GetAvailableDefinitionsAsync();
+    }
+
+
+    private Task Build(string buildingDefinitionId)
+    {
+        return BuildingService.BuildAsync(buildingDefinitionId, (0, 0));
+    }
+
+    private Task Demolish(Guid buildingId)
+    {
+        return BuildingService.DemolishAsync(buildingId);
+    }
+
+}

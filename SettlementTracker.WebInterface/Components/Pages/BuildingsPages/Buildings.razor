@@ -1,0 +1,63 @@
+﻿@page "/buildings"
+@using SettlementTracker.Core.Models.Definitions
+@using SettlementTracker.Core.Models.Entities
+@using SettlementTracker.Core.Services
+
+@inject IBuildingService BuildingService
+
+@rendermode InteractiveServer
+
+<PageTitle>Здания - Settlement Tracker</PageTitle>
+
+<h1>Управление зданиями</h1>
+
+<div class="row">
+    @if (_builtBuildings != null)
+    {
+        @foreach (var building in _builtBuildings)
+        {
+            <BuildingCard Building="building" BuildButtonHandler="Build" DemolishButtonHandler="Demolish"/>
+        }
+    }
+    @if (_availableDefinitions != null)
+    {
+        @foreach (var definition in _availableDefinitions)
+        {
+            <BuildingCard BuildingDefinition="definition" BuildButtonHandler="Build" DemolishButtonHandler="Demolish"/>
+        }
+    }
+    @for (int i = 0; i < 15; i++)
+    {
+        <BuildingCard/>
+    }
+</div>
+
+@code {
+    private IEnumerable<Building>? _builtBuildings;
+    private IEnumerable<BuildingDefinition>? _availableDefinitions;
+    private bool _showAlreadyBuilt = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        await BuildingService.LoadFromFileAsync();
+        _builtBuildings = await BuildingService.GetBuiltBuildingsAsync();
+        _availableDefinitions = await BuildingService.GetAvailableDefinitionsAsync();
+    }
+
+
+    private Task Build(string buildingDefinitionId)
+    {
+        return BuildingService.BuildAsync(buildingDefinitionId, (0, 0));
+    }
+
+    private Task Demolish(Guid buildingId)
+    {
+        return BuildingService.DemolishAsync(buildingId);
+    }
+
+}

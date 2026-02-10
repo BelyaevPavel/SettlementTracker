@@ -1,0 +1,76 @@
+﻿@using BlazorBootstrap
+@using SettlementTracker.Core.Models.Definitions
+@using SettlementTracker.Core.Models.Entities
+@using SettlementTracker.Core.Services
+
+@inject IBuildingService BuildingService
+
+@rendermode InteractiveServer
+
+@if (Building != null)
+{
+    <Card Class="col-md-3 col-sm-6 col-sx-12 mb-4">
+        <img class="rounded-top" src="/images/@Building.Definition.PictureName" alt="placeholder"/>
+        <CardBody>
+            <CardTitle>@Building.Definition.Name</CardTitle>
+            <CardSubTitle Class="mb-2 text-muted">Стоимость постройки 20 древесины</CardSubTitle>
+            <CardText>
+                @Building.Definition.Description
+            </CardText>
+            <Button Color="ButtonColor.Danger" @onclick="@(() => DemolishButtonHandler.Invoke(Building.Id))">Снести</Button>
+        </CardBody>
+    </Card>
+}
+else
+{
+    @if (BuildingDefinition != null)
+    {
+        <Card Class="col-md-3 col-sm-6 col-sx-12 mb-4">
+            <img class="rounded-top" src="/images/@BuildingDefinition.PictureName" alt="placeholder"/>
+            <CardBody>
+                <CardTitle>@BuildingDefinition.Name</CardTitle>
+                <CardSubTitle Class="mb-2 text-muted">Стоимость постройки 20 древесины</CardSubTitle>
+                <CardText>
+                    @BuildingDefinition.Description
+                </CardText>
+                <Button Color="ButtonColor.Primary" @onclick="@(() => BuildButtonHandler.Invoke(BuildingDefinition.Id))">Построить</Button>
+            </CardBody>
+        </Card>
+    }
+    else
+    {
+        <Card Class="col-xs-12 col-sm-6 col-md-3 mb-4">
+            <img class="rounded-top" src="/images/Вонючая яма.png" alt="placeholder"/>
+            <CardBody>
+                <CardTitle>Кислый жабий пруд</CardTitle>
+                <CardSubTitle Class="mb-2 text-muted">Стоимость постройки 20 древесины</CardSubTitle>
+                <CardText>
+                    Игроки получают яд, 1д4 ко всем броскам атаки или любое другое применение.
+                    Позволяет взять опыт "Маленький принц и роза"
+                </CardText>
+                <Button Color="ButtonColor.Primary">Построить</Button>
+                <Button Color="ButtonColor.Danger">Снести</Button>
+            </CardBody>
+        </Card>
+    }
+}
+
+@code
+{
+    [Parameter] public Building? Building { get; set; }
+    [Parameter] public BuildingDefinition? BuildingDefinition { get; set; }
+
+    [Parameter] public Func<string, Task> BuildButtonHandler { get; set; }
+    [Parameter] public Func<Guid, Task> DemolishButtonHandler { get; set; }
+
+
+    private Task Build()
+    {
+        return BuildingService.BuildAsync(BuildingDefinition.Id, (0, 0));
+    }
+
+    private Task Demolish()
+    {
+        return BuildingService.DemolishAsync(Building.Id);
+    }
+}
