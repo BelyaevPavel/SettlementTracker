@@ -9,6 +9,10 @@ namespace SettlementTracker.Core.Models.Definitions
 
         [JsonPropertyName("name")] public string Name { get; set; } = string.Empty;
 
+        [JsonPropertyName("iconName")] public string IconName { get; set; } = string.Empty;
+
+        [JsonPropertyName("pictureName")] public string PictureName { get; set; } = string.Empty;
+
         [JsonPropertyName("description")] public string Description { get; set; } = string.Empty;
 
         [JsonPropertyName("size")] public (int Width, int Height) Size { get; set; } = (1, 1);
