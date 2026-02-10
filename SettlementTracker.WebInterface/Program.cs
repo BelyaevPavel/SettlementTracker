@@ -8,14 +8,15 @@ public class Program
     public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
-        
+
         builder.Services.AddBlazorBootstrap();
-        
+
         // Add services to the container.
         builder.Services.AddRazorComponents()
             .AddInteractiveServerComponents();
 
-        builder.Services.AddSingleton<ICitizenService,CitizenService>();
+        builder.Services.AddSingleton<ICitizenService, CitizenService>();
+        builder.Services.AddSingleton<IBuildingService, BuildingService>();
 
 
         var app = builder.Build();
