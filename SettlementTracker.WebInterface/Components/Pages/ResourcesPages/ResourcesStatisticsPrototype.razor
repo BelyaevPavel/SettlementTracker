@@ -1,0 +1,52 @@
+﻿@rendermode InteractiveServer
+@using BlazorBootstrap
+
+<Offcanvas @ref="offcanvas"
+           title="Offcanvas">
+    <HeaderTemplate>
+        <div class="d-flex justify-content-between align-items-center w-100">
+            <h5 class="mb-0">📊 Статистика населения</h5>
+            <button type="button" class="btn-close" @onclick="HideAsync"></button>
+        </div>
+    </HeaderTemplate>
+    <BodyTemplate>
+        <div class="row">
+            <div class="col-4">
+                Древесина
+            </div>
+            <div class="col-4">
+                100 <span></span>
+            </div>
+        </div>
+
+    </BodyTemplate>
+</Offcanvas>
+
+@code {
+    private Offcanvas offcanvas = default!;
+
+    public EventCallback OnShown { get; set; }
+
+    private async Task OnShowOffcanvasClick() => await offcanvas.ShowAsync();
+
+    private async Task OnHideOffcanvasClick() => await offcanvas.HideAsync();
+
+    public async Task ShowAsync()
+    {
+        // await LoadStatisticsAsync();
+        await offcanvas.ShowAsync();
+        await OnShown.InvokeAsync();
+    }
+
+    public async Task HideAsync()
+    {
+        await offcanvas.HideAsync();
+    }
+
+
+    private async Task LoadStatisticsAsync()
+    {
+        throw new NotImplementedException();
+    }
+
+}

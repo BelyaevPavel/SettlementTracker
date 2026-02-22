@@ -1,0 +1,39 @@
+﻿@using System.ComponentModel.Design
+@using SettlementTracker.Core.Managers
+@using SettlementTracker.WebInterface.Data.Services
+<button @onclick="ToggleStatistics" class="btn btn-outline-info position-relative">
+    <i class="bi bi-graph-up"></i>
+    <span class="d-none d-md-inline ms-1">Статистика</span>
+    @if (HasNewData)
+    {
+        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+            <span class="visually-hidden">Обновленные данные</span>
+        </span>
+    }
+</button>
+
+@code {
+    [Inject] private ISettlementResourcesService StatisticsService { get; set; } = default!;
+    [CascadingParameter(Name = "ResourcesStatisticsPanel")] private ResourcesStatisticsPrototype StatisticsPanel { get; set; }
+
+    private bool HasNewData { get; set; }
+
+    protected override void OnInitialized()
+    {
+        StatisticsService.ResourcesChanged += (_, _) =>
+        {
+            HasNewData = true;
+            InvokeAsync(StateHasChanged);
+        };
+    }
+
+    private async Task ToggleStatistics()
+    {
+        if (StatisticsPanel != null)
+        {
+            await StatisticsPanel.ShowAsync();
+            HasNewData = false;
+        }
+    }
+
+}

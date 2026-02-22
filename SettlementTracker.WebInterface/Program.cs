@@ -1,3 +1,5 @@
+using System.ComponentModel.Design;
+using SettlementTracker.Core.Repositories;
 using SettlementTracker.WebInterface.Components;
 using SettlementTracker.WebInterface.Data.Services;
 
@@ -17,6 +19,8 @@ public class Program
 
         builder.Services.AddSingleton<ICitizenService, CitizenService>();
         builder.Services.AddSingleton<IBuildingService, BuildingService>();
+        builder.Services.AddSingleton<ISettlementResourcesService, SettlementResourcesService>();
+        builder.Services.AddSingleton<JsonDefinitionRepository>(new JsonDefinitionRepository("State"));
 
 
         var app = builder.Build();

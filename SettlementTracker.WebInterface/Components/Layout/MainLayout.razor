@@ -1,10 +1,14 @@
 ﻿@inherits LayoutComponentBase
 
 @using BlazorBootstrap
+@using SettlementTracker.WebInterface.Components.Pages.ResourcesPages
 
 <BlazorBootstrapLayout StickyHeader="true">
     <HeaderSection>
         <Icon Name="IconName.List" role="button" @onclick="@(() => _navMenu.ToggleSidebar())"/>
+        <CascadingValue Value="@_resourceStatistics" Name="ResourcesStatisticsPanel">
+            <ResourceStatisticsButton/>
+        </CascadingValue>
         <ThemeSwitcher Class="ps-3 ps-lg-2"/>
     </HeaderSection>
 
@@ -20,9 +24,12 @@
     </FooterSection>
 </BlazorBootstrapLayout>
 
+<ResourcesStatisticsPrototype @ref="_resourceStatistics"/>
+
 @code
 {
     NavMenu _navMenu = default!;
+    ResourcesStatisticsPrototype _resourceStatistics = default!;
 }
 
 <div id="blazor-error-ui">
