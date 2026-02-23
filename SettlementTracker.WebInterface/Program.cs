@@ -19,8 +19,7 @@ public class Program
 
         builder.Services.AddSingleton<ICitizenService, CitizenService>();
         builder.Services.AddSingleton<IBuildingService, BuildingService>();
-        builder.Services.AddSingleton<ISettlementResourcesService, SettlementResourcesService>();
-        builder.Services.AddSingleton<JsonDefinitionRepository>(new JsonDefinitionRepository("State"));
+        builder.Services.AddSingleton<ISettlementResourcesService>(new SettlementResourcesService(new JsonDefinitionRepository("State")));
 
 
         var app = builder.Build();
