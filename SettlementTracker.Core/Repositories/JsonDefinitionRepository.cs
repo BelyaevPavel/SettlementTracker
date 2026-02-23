@@ -1,11 +1,13 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Threading.Tasks;
 using SettlementTracker.Core.Models.Definitions;
 
 namespace SettlementTracker.Core.Repositories
 {
-    public class JsonDefinitionRepository
+    public class JsonDefinitionRepository : IResourceDefinitionRepository, IBuildingDefinitionRepository,
+        IPopulationDefinitionRepository, IJobDefinitionRepository
     {
         private readonly string _basePath;
 
@@ -14,6 +16,8 @@ namespace SettlementTracker.Core.Repositories
             _basePath = basePath;
             if (!Directory.Exists(_basePath)) Directory.CreateDirectory(_basePath);
         }
+
+        #region Resources
 
         public Dictionary<string, ResourceDefinition> LoadResourceDefinitions()
         {
@@ -33,53 +37,22 @@ namespace SettlementTracker.Core.Repositories
             return result;
         }
 
-        public Dictionary<string, BuildingDefinition> LoadBuildingDefinitions()
+        public async Task<Dictionary<string, ResourceDefinition>> LoadResourceDefinitionsAsync()
         {
-            var filePath = Path.Combine(_basePath, "buildings.json");
+            var filePath = Path.Combine(_basePath, "resources.json");
             if (!File.Exists(filePath))
-                // Создаем базовые здания по умолчанию
-                return CreateDefaultBuildingDefinitions();
+                // Создаем базовые ресурсы по умолчанию
+                return CreateDefaultResourceDefinitions();
 
-            var json = File.ReadAllText(filePath);
-            var definitions = JsonSerializer.Deserialize<List<BuildingDefinition>>(json);
+            var json = await File.ReadAllTextAsync(filePath);
+            var definitions = JsonSerializer.Deserialize<List<ResourceDefinition>>(json);
 
-            var result = new Dictionary<string, BuildingDefinition>();
+            var result = new Dictionary<string, ResourceDefinition>();
             if (definitions != null)
                 foreach (var def in definitions)
                     result[def.Id] = def;
 
             return result;
-        }
-
-        public Dictionary<string, JobDefinition> LoadJobDefinitions()
-        {
-            var filePath = Path.Combine(_basePath, "jobs.json");
-            if (!File.Exists(filePath))
-                // Создаем базовые задания по умолчанию
-                return CreateDefaultJobDefinitions();
-
-            var json = File.ReadAllText(filePath);
-            var definitions = JsonSerializer.Deserialize<List<JobDefinition>>(json);
-
-            var result = new Dictionary<string, JobDefinition>();
-            if (definitions != null)
-                foreach (var def in definitions)
-                    result[def.Id] = def;
-
-            return result;
-        }
-
-        public PopulationDefinition LoadPopulationDefinition()
-        {
-            var filePath = Path.Combine(_basePath, "population.json");
-            if (!File.Exists(filePath))
-                // Создаем настройки по умолчанию
-                return CreateDefaultPopulationDefinition();
-
-            var json = File.ReadAllText(filePath);
-            var definition = JsonSerializer.Deserialize<PopulationDefinition>(json);
-
-            return definition ?? CreateDefaultPopulationDefinition();
         }
 
         public void SaveResourceDefinitions(Dictionary<string, ResourceDefinition> definitions)
@@ -89,27 +62,14 @@ namespace SettlementTracker.Core.Repositories
             File.WriteAllText(filePath, json);
         }
 
-        public void SaveBuildingDefinitions(Dictionary<string, BuildingDefinition> definitions)
+        public async Task SaveResourceDefinitionsAsync(Dictionary<string, ResourceDefinition> definitions)
         {
-            var filePath = Path.Combine(_basePath, "buildings.json");
+            var filePath = Path.Combine(_basePath, "resources.json");
             var json = JsonSerializer.Serialize(definitions.Values, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(filePath, json);
+            await File.WriteAllTextAsync(filePath, json);
         }
-
-        public void SaveJobDefinitions(Dictionary<string, JobDefinition> definitions)
-        {
-            var filePath = Path.Combine(_basePath, "jobs.json");
-            var json = JsonSerializer.Serialize(definitions.Values, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(filePath, json);
-        }
-
-        public void SavePopulationDefinition(PopulationDefinition definition)
-        {
-            var filePath = Path.Combine(_basePath, "population.json");
-            var json = JsonSerializer.Serialize(definition, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(filePath, json);
-        }
-
+        
+        
         private Dictionary<string, ResourceDefinition> CreateDefaultResourceDefinitions()
         {
             var resources = new Dictionary<string, ResourceDefinition>
@@ -152,6 +112,60 @@ namespace SettlementTracker.Core.Repositories
             return resources;
         }
 
+        #endregion
+
+        #region Buildings
+        
+        public Dictionary<string, BuildingDefinition> LoadBuildingDefinitions()
+        {
+            var filePath = Path.Combine(_basePath, "buildings.json");
+            if (!File.Exists(filePath))
+                // Создаем базовые здания по умолчанию
+                return CreateDefaultBuildingDefinitions();
+
+            var json = File.ReadAllText(filePath);
+            var definitions = JsonSerializer.Deserialize<List<BuildingDefinition>>(json);
+
+            var result = new Dictionary<string, BuildingDefinition>();
+            if (definitions != null)
+                foreach (var def in definitions)
+                    result[def.Id] = def;
+
+            return result;
+        }
+
+        public async Task<Dictionary<string, BuildingDefinition>> LoadBuildingDefinitionsAsync()
+        {
+            var filePath = Path.Combine(_basePath, "buildings.json");
+            if (!File.Exists(filePath))
+                // Создаем базовые здания по умолчанию
+                return CreateDefaultBuildingDefinitions();
+
+            var json = await File.ReadAllTextAsync(filePath);
+            var definitions = JsonSerializer.Deserialize<List<BuildingDefinition>>(json);
+
+            var result = new Dictionary<string, BuildingDefinition>();
+            if (definitions != null)
+                foreach (var def in definitions)
+                    result[def.Id] = def;
+
+            return result;
+        }
+        
+        public void SaveBuildingDefinitions(Dictionary<string, BuildingDefinition> definitions)
+        {
+            var filePath = Path.Combine(_basePath, "buildings.json");
+            var json = JsonSerializer.Serialize(definitions.Values, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(filePath, json);
+        }
+
+        public async Task SaveBuildingDefinitionsAsync(Dictionary<string, BuildingDefinition> definitions)
+        {
+            var filePath = Path.Combine(_basePath, "buildings.json");
+            var json = JsonSerializer.Serialize(definitions.Values, new JsonSerializerOptions { WriteIndented = true });
+            await File.WriteAllTextAsync(filePath, json);
+        }
+        
         private Dictionary<string, BuildingDefinition> CreateDefaultBuildingDefinitions()
         {
             var buildings = new Dictionary<string, BuildingDefinition>
@@ -238,7 +252,61 @@ namespace SettlementTracker.Core.Repositories
             SaveBuildingDefinitions(buildings);
             return buildings;
         }
+        
+        #endregion
 
+        #region Jobs
+
+        public Dictionary<string, JobDefinition> LoadJobDefinitions()
+        {
+            var filePath = Path.Combine(_basePath, "jobs.json");
+            if (!File.Exists(filePath))
+                // Создаем базовые задания по умолчанию
+                return CreateDefaultJobDefinitions();
+
+            var json = File.ReadAllText(filePath);
+            var definitions = JsonSerializer.Deserialize<List<JobDefinition>>(json);
+
+            var result = new Dictionary<string, JobDefinition>();
+            if (definitions != null)
+                foreach (var def in definitions)
+                    result[def.Id] = def;
+
+            return result;
+        }
+
+        public async Task<Dictionary<string, JobDefinition>> LoadJobDefinitionsAsync()
+        {
+            var filePath = Path.Combine(_basePath, "jobs.json");
+            if (!File.Exists(filePath))
+                // Создаем базовые задания по умолчанию
+                return CreateDefaultJobDefinitions();
+
+            var json = await File.ReadAllTextAsync(filePath);
+            var definitions = JsonSerializer.Deserialize<List<JobDefinition>>(json);
+
+            var result = new Dictionary<string, JobDefinition>();
+            if (definitions != null)
+                foreach (var def in definitions)
+                    result[def.Id] = def;
+
+            return result;
+        }
+        
+        public void SaveJobDefinitions(Dictionary<string, JobDefinition> definitions)
+        {
+            var filePath = Path.Combine(_basePath, "jobs.json");
+            var json = JsonSerializer.Serialize(definitions.Values, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(filePath, json);
+        }
+
+        public async Task SaveJobDefinitionsAsync(Dictionary<string, JobDefinition> definitions)
+        {
+            var filePath = Path.Combine(_basePath, "jobs.json");
+            var json = JsonSerializer.Serialize(definitions.Values, new JsonSerializerOptions { WriteIndented = true });
+            await File.WriteAllTextAsync(filePath, json);
+        }
+        
         private Dictionary<string, JobDefinition> CreateDefaultJobDefinitions()
         {
             var jobs = new Dictionary<string, JobDefinition>
@@ -307,6 +375,50 @@ namespace SettlementTracker.Core.Repositories
             return jobs;
         }
 
+        #endregion
+
+        #region Population
+
+        public PopulationDefinition LoadPopulationDefinition()
+        {
+            var filePath = Path.Combine(_basePath, "population.json");
+            if (!File.Exists(filePath))
+                // Создаем настройки по умолчанию
+                return CreateDefaultPopulationDefinition();
+
+            var json = File.ReadAllText(filePath);
+            var definition = JsonSerializer.Deserialize<PopulationDefinition>(json);
+
+            return definition ?? CreateDefaultPopulationDefinition();
+        }
+
+        public async Task<PopulationDefinition> LoadPopulationDefinitionAsync()
+        {
+            var filePath = Path.Combine(_basePath, "population.json");
+            if (!File.Exists(filePath))
+                // Создаем настройки по умолчанию
+                return CreateDefaultPopulationDefinition();
+
+            var json = await File.ReadAllTextAsync(filePath);
+            var definition = JsonSerializer.Deserialize<PopulationDefinition>(json);
+
+            return definition ?? CreateDefaultPopulationDefinition();
+        }
+
+        public void SavePopulationDefinition(PopulationDefinition definition)
+        {
+            var filePath = Path.Combine(_basePath, "population.json");
+            var json = JsonSerializer.Serialize(definition, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(filePath, json);
+        }
+
+        public async Task SavePopulationDefinitionAsync(PopulationDefinition definition)
+        {
+            var filePath = Path.Combine(_basePath, "population.json");
+            var json = JsonSerializer.Serialize(definition, new JsonSerializerOptions { WriteIndented = true });
+            await File.WriteAllTextAsync(filePath, json);
+        }
+
         private PopulationDefinition CreateDefaultPopulationDefinition()
         {
             var populationDef = new PopulationDefinition
@@ -332,5 +444,8 @@ namespace SettlementTracker.Core.Repositories
             SavePopulationDefinition(populationDef);
             return populationDef;
         }
+        
+        #endregion
+     
     }
 }
