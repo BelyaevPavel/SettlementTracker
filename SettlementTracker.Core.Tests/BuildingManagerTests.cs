@@ -8,10 +8,6 @@ namespace SettlementTracker.Core.Tests;
 [TestFixture]
 public class BuildingManagerTests
 {
-    private SettlementState _settlement;
-    private ResourceManager _resourceManager;
-    private BuildingManager _buildingManager;
-
     [SetUp]
     public void Setup()
     {
@@ -19,12 +15,16 @@ public class BuildingManagerTests
         _resourceManager = new ResourceManager(_settlement);
         _buildingManager = new BuildingManager(_settlement, _resourceManager);
 
-        var resourceDefinitions = TestDataGenerator.CreateResourceDefinitions();
+        Dictionary<string, ResourceDefinition>? resourceDefinitions = TestDataGenerator.CreateResourceDefinitions();
         _resourceManager.InitializeResources(resourceDefinitions);
 
-        var buildingDefinitions = TestDataGenerator.CreateBuildingDefinitions();
+        Dictionary<string, BuildingDefinition>? buildingDefinitions = TestDataGenerator.CreateBuildingDefinitions();
         _buildingManager.InitializeDefinitions(buildingDefinitions);
     }
+
+    private SettlementState _settlement;
+    private ResourceManager _resourceManager;
+    private BuildingManager _buildingManager;
 
     [Test]
     public void CanBuildBuilding_ShouldReturnTrue_WhenResourcesAndPositionAvailable()
@@ -34,7 +34,7 @@ public class BuildingManagerTests
         var position = (1, 1);
 
         // Act
-        var canBuild = _buildingManager.CanBuildBuilding(buildingId, position);
+        bool canBuild = _buildingManager.CanBuildBuilding(buildingId, position);
 
         // Assert
         Assert.That(canBuild, Is.True);
@@ -51,7 +51,7 @@ public class BuildingManagerTests
         _settlement.Resources["wood"] = 5;
 
         // Act
-        var canBuild = _buildingManager.CanBuildBuilding(buildingId, position);
+        bool canBuild = _buildingManager.CanBuildBuilding(buildingId, position);
 
         // Assert
         Assert.That(canBuild, Is.False);
@@ -63,10 +63,10 @@ public class BuildingManagerTests
         // Arrange
         const string buildingId = "house";
         var position = (1, 1);
-        var initialWood = _settlement.Resources["wood"];
+        float initialWood = _settlement.Resources["wood"];
 
         // Act
-        var building = _buildingManager.BuildBuilding(buildingId, position, "My House");
+        Building? building = _buildingManager.BuildBuilding(buildingId, position, "My House");
 
         // Assert
         Assert.Multiple(() =>
@@ -91,7 +91,7 @@ public class BuildingManagerTests
         _settlement.Resources["wood"] = 5;
 
         // Act
-        var building = _buildingManager.BuildBuilding(buildingId, position);
+        Building? building = _buildingManager.BuildBuilding(buildingId, position);
 
         // Assert
         Assert.That(building, Is.Null);
@@ -102,7 +102,7 @@ public class BuildingManagerTests
     {
         // Arrange
         var building = new Building(Guid.NewGuid(), "house", (1, 1));
-        var citizen = _settlement.Citizens[0];
+        Citizen? citizen = _settlement.Citizens[0];
 
         building.AssignCitizen(citizen.Id);
         citizen.WorkStatus = WorkStatus.AssignedToBuilding;
@@ -153,7 +153,7 @@ public class BuildingManagerTests
         {
             Definition = buildingDef
         };
-        var citizen = TestDataGenerator.CreateAdult(actualGender);
+        Citizen? citizen = TestDataGenerator.CreateAdult(actualGender);
 
         building.AssignCitizen(citizen.Id);
 
@@ -161,7 +161,7 @@ public class BuildingManagerTests
         _settlement.Buildings.Add(building);
 
         // Act
-        var requirementsMet = _buildingManager.AreWorkerRequirementsMet(building);
+        bool requirementsMet = _buildingManager.AreWorkerRequirementsMet(building);
 
         // Assert
         Assert.That(requirementsMet, Is.True);
@@ -193,13 +193,13 @@ public class BuildingManagerTests
             Definition = buildingDef
         };
 
-        var citizen = TestDataGenerator.CreateAdult();
+        Citizen? citizen = TestDataGenerator.CreateAdult();
         building.AssignCitizen(citizen.Id);
 
         _settlement.Buildings.Add(building);
 
         // Act
-        var requirementsMet = _buildingManager.AreWorkerRequirementsMet(building);
+        bool requirementsMet = _buildingManager.AreWorkerRequirementsMet(building);
 
         // Assert
         Assert.That(requirementsMet, Is.False);
@@ -216,7 +216,7 @@ public class BuildingManagerTests
         _settlement.Buildings.AddRange(new[] { house1, house2, farm });
 
         // Act
-        var houses = _buildingManager.GetBuildingsByType("house");
+        List<Building>? houses = _buildingManager.GetBuildingsByType("house");
 
         // Assert
         Assert.Multiple(() =>

@@ -10,26 +10,26 @@ namespace SettlementTracker.Core.Managers
         private readonly SettlementState _settlement;
         private Dictionary<string, ResourceDefinition> _resourceDefinitions = new();
 
-        public event EventHandler<ResourcesChangedEventArgs>? ResourcesChanged;
-
         public ResourceManager(SettlementState settlement)
         {
             _settlement = settlement;
         }
+
+        public event EventHandler<ResourcesChangedEventArgs>? ResourcesChanged;
 
         public void InitializeResources(Dictionary<string, ResourceDefinition> resourceDefinitions)
         {
             _resourceDefinitions = resourceDefinitions;
 
             // Инициализируем ресурсы нулями, если их еще нет
-            foreach (var resourceDef in resourceDefinitions.Values)
+            foreach (ResourceDefinition resourceDef in resourceDefinitions.Values)
                 if (!_settlement.Resources.ContainsKey(resourceDef.Id))
                     _settlement.Resources[resourceDef.Id] = 0;
         }
 
         public bool HasEnoughResources(List<ResourceEffect> requiredResources)
         {
-            foreach (var requirement in requiredResources)
+            foreach (ResourceEffect requirement in requiredResources)
                 if (!_settlement.Resources.ContainsKey(requirement.ResourceId) ||
                     _settlement.Resources[requirement.ResourceId] < Math.Abs(requirement.Amount))
                     return false;
@@ -41,7 +41,7 @@ namespace SettlementTracker.Core.Managers
             if (!HasEnoughResources(resourcesToConsume))
                 return false;
 
-            foreach (var resource in resourcesToConsume)
+            foreach (ResourceEffect resource in resourcesToConsume)
             {
                 _settlement.Resources[resource.ResourceId] -= Math.Abs(resource.Amount);
                 TrackDailyChange(resource.ResourceId, -Math.Abs(resource.Amount));
@@ -53,7 +53,7 @@ namespace SettlementTracker.Core.Managers
 
         public void AddResources(List<ResourceEffect> resourcesToAdd)
         {
-            foreach (var resource in resourcesToAdd)
+            foreach (ResourceEffect resource in resourcesToAdd)
             {
                 if (!_settlement.Resources.ContainsKey(resource.ResourceId))
                     _settlement.Resources[resource.ResourceId] = 0;
@@ -77,7 +77,7 @@ namespace SettlementTracker.Core.Managers
 
         public float GetResourceAmount(string resourceId)
         {
-            return _settlement.Resources.TryGetValue(resourceId, out var amount) ? amount : 0;
+            return _settlement.Resources.TryGetValue(resourceId, out float amount) ? amount : 0;
         }
 
         public Dictionary<string, float> GetAllResources()
@@ -99,9 +99,11 @@ namespace SettlementTracker.Core.Managers
         {
             var forecast = new Dictionary<string, (float Current, float DailyChange)>();
 
-            foreach (var kvp in _settlement.Resources)
+            foreach (KeyValuePair<string, float> kvp in _settlement.Resources)
             {
-                var dailyChange = _settlement.DailyResourceChanges.TryGetValue(kvp.Key, out var change) ? change : 0;
+                float dailyChange = _settlement.DailyResourceChanges.TryGetValue(kvp.Key, out float change)
+                    ? change
+                    : 0;
                 forecast[kvp.Key] = (kvp.Value, dailyChange);
             }
 
@@ -112,9 +114,11 @@ namespace SettlementTracker.Core.Managers
         {
             var daysUntilDepletion = new Dictionary<string, int>();
 
-            foreach (var kvp in _settlement.Resources)
+            foreach (KeyValuePair<string, float> kvp in _settlement.Resources)
             {
-                var dailyChange = _settlement.DailyResourceChanges.TryGetValue(kvp.Key, out var change) ? change : 0;
+                float dailyChange = _settlement.DailyResourceChanges.TryGetValue(kvp.Key, out float change)
+                    ? change
+                    : 0;
 
                 if (dailyChange >= 0)
                 {

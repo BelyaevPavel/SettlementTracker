@@ -5,8 +5,7 @@ namespace SettlementTracker.Core.Tests.Data.Services;
 
 public class MockDefinitionRepository : IResourceDefinitionRepository
 {
-    public Dictionary<string, ResourceDefinition> DefinitionPreset { get; set; } =
-        new Dictionary<string, ResourceDefinition>();
+    public Dictionary<string, ResourceDefinition> DefinitionPreset { get; set; } = new();
 
     public Dictionary<string, ResourceDefinition> LoadResourceDefinitions()
     {
@@ -20,11 +19,9 @@ public class MockDefinitionRepository : IResourceDefinitionRepository
 
     public void SaveResourceDefinitions(Dictionary<string, ResourceDefinition> definitions)
     {
-        return;
     }
 
     public async Task SaveResourceDefinitionsAsync(Dictionary<string, ResourceDefinition> definitions)
     {
-        return;
     }
 }

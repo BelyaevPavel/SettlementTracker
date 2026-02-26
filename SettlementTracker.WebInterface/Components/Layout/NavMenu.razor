@@ -11,19 +11,19 @@
 @code {
     private Sidebar2 _sidebar = default!;
 
-    private IEnumerable<NavItem> navItems = default!;
+    private IEnumerable<NavItem> _navItems = default!;
 
     private async Task<Sidebar2DataProviderResult> Sidebar2DataProvider(Sidebar2DataProviderRequest request)
     {
-        if (navItems is null)
-            navItems = GetNavItems();
+        if (_navItems is null)
+            _navItems = GetNavItems();
 
-        return await Task.FromResult(request.ApplyTo(navItems));
+        return await Task.FromResult(request.ApplyTo(_navItems));
     }
 
     private IEnumerable<NavItem> GetNavItems()
     {
-        navItems = new List<NavItem>
+        _navItems = new List<NavItem>
         {
             new NavItem { Id = "1", Href = "/", IconName = IconName.HouseDoorFill, Text = "Home", Match = NavLinkMatch.All },
             new NavItem { Id = "2", Href = "/citizens", IconName = IconName.PersonFill, Text = "Горожанe" },
@@ -31,7 +31,7 @@
             new NavItem { Id = "4", Href = "/buildings_alt", IconName = IconName.House, Text = "Здания_alt" },
         };
 
-        return navItems;
+        return _navItems;
     }
     
     

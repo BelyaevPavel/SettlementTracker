@@ -1,4 +1,4 @@
-using SettlementTracker.Core.Repositories;
+﻿using SettlementTracker.Core.Repositories;
 using SettlementTracker.Core.Services;
 using SettlementTracker.WebInterface.Components;
 using SettlementTracker.WebInterface.Data.Services;
@@ -9,7 +9,7 @@ public class Program
 {
     public static void Main(string[] args)
     {
-        var builder = WebApplication.CreateBuilder(args);
+        WebApplicationBuilder? builder = WebApplication.CreateBuilder(args);
 
         builder.Services.AddBlazorBootstrap();
 
@@ -19,10 +19,11 @@ public class Program
 
         builder.Services.AddSingleton<ICitizenService, CitizenService>();
         builder.Services.AddSingleton<IBuildingService, BuildingService>();
-        builder.Services.AddSingleton<ISettlementResourcesService>(new SettlementResourcesService(new JsonDefinitionRepository("State")));
+        builder.Services.AddSingleton<ISettlementResourcesService>(
+            new SettlementResourcesService(new JsonDefinitionRepository("State")));
 
 
-        var app = builder.Build();
+        WebApplication? app = builder.Build();
 
         // Configure the HTTP request pipeline.
         if (!app.Environment.IsDevelopment())

@@ -21,14 +21,14 @@ namespace SettlementTracker.Core.Managers
             _jobDefinitions = jobDefinitions;
 
             // Связываем определения с существующими заданиями
-            foreach (var job in _settlement.ActiveJobs)
-                if (_jobDefinitions.TryGetValue(job.DefinitionId, out var definition))
+            foreach (ActiveJob job in _settlement.ActiveJobs)
+                if (_jobDefinitions.TryGetValue(job.DefinitionId, out JobDefinition definition))
                     job.Definition = definition;
         }
 
         public ActiveJob? CreateJob(string definitionId, string customName = "")
         {
-            if (!_jobDefinitions.TryGetValue(definitionId, out var definition))
+            if (!_jobDefinitions.TryGetValue(definitionId, out JobDefinition definition))
                 return null;
 
             var job = new ActiveJob(Guid.NewGuid(), definitionId)
@@ -43,11 +43,11 @@ namespace SettlementTracker.Core.Managers
 
         public void RemoveJob(Guid jobId)
         {
-            var job = _settlement.ActiveJobs.FirstOrDefault(j => j.Id == jobId);
+            ActiveJob job = _settlement.ActiveJobs.FirstOrDefault(j => j.Id == jobId);
             if (job == null) return;
 
             // Освобождаем работников
-            foreach (var citizenId in job.AssignedCitizenIds.ToList())
+            foreach (Guid citizenId in job.AssignedCitizenIds.ToList())
             {
                 var populationManager = new PopulationManager(_settlement);
                 populationManager.UnassignCitizen(citizenId);
@@ -65,14 +65,14 @@ namespace SettlementTracker.Core.Managers
         {
             if (job.Definition == null) return false;
 
-            var assignedCitizens = job.AssignedCitizenIds
+            List<Citizen> assignedCitizens = job.AssignedCitizenIds
                 .Select(id => _settlement.Citizens.FirstOrDefault(c => c.Id == id))
                 .Where(c => c != null)
                 .ToList();
 
-            foreach (var requirement in job.Definition.WorkerRequirements)
+            foreach (WorkerRequirement requirement in job.Definition.WorkerRequirements)
             {
-                var matchingWorkers = assignedCitizens.Count(c =>
+                int matchingWorkers = assignedCitizens.Count(c =>
                     c!.AgeCategory == requirement.AgeCategory &&
                     c.Gender == requirement.Gender &&
                     (requirement.CanBeSlave || !c.IsSlave));

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Text.Json;
+using SettlementTracker.Core.Managers;
 using SettlementTracker.Core.Models.Entities;
 
 namespace SettlementTracker.Core.Repositories
@@ -17,24 +18,24 @@ namespace SettlementTracker.Core.Repositories
 
         public void SaveGameState(SettlementState settlement, string fileName = "save.json")
         {
-            var filePath = Path.Combine(_savePath, fileName);
+            string filePath = Path.Combine(_savePath, fileName);
             var options = new JsonSerializerOptions
             {
                 WriteIndented = true,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             };
 
-            var json = JsonSerializer.Serialize(settlement, options);
+            string json = JsonSerializer.Serialize(settlement, options);
             File.WriteAllText(filePath, json);
         }
 
         public SettlementState? LoadGameState(string fileName = "save.json")
         {
-            var filePath = Path.Combine(_savePath, fileName);
+            string filePath = Path.Combine(_savePath, fileName);
             if (!File.Exists(filePath))
                 return null;
 
-            var json = File.ReadAllText(filePath);
+            string json = File.ReadAllText(filePath);
             var options = new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
@@ -54,7 +55,7 @@ namespace SettlementTracker.Core.Repositories
             settlement.Resources["water"] = 100;
 
             // Начальное население
-            var populationManager = new Managers.PopulationManager(settlement);
+            var populationManager = new PopulationManager(settlement);
             populationManager.AddFamily(2, 1); // 2 взрослых, 1 ребенок
             populationManager.AddRandomCitizen(); // Еще один взрослый
 
@@ -63,13 +64,13 @@ namespace SettlementTracker.Core.Repositories
 
         public bool SaveExists(string fileName = "save.json")
         {
-            var filePath = Path.Combine(_savePath, fileName);
+            string filePath = Path.Combine(_savePath, fileName);
             return File.Exists(filePath);
         }
 
         public void DeleteSave(string fileName = "save.json")
         {
-            var filePath = Path.Combine(_savePath, fileName);
+            string filePath = Path.Combine(_savePath, fileName);
             if (File.Exists(filePath)) File.Delete(filePath);
         }
     }

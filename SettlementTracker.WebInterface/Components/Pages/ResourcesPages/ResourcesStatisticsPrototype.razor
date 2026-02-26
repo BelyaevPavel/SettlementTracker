@@ -1,7 +1,7 @@
 ﻿@rendermode InteractiveServer
 @using BlazorBootstrap
 
-<Offcanvas @ref="offcanvas"
+<Offcanvas @ref="_offcanvas"
            title="Ресурсы">
     <HeaderTemplate>
         <div class="d-flex justify-content-between align-items-center w-100">
@@ -92,13 +92,13 @@
 </Offcanvas>
 
 @code {
-    private Offcanvas offcanvas = default!;
+    private Offcanvas _offcanvas = default!;
 
     public EventCallback OnShown { get; set; }
 
-    private async Task OnShowOffcanvasClick() => await offcanvas.ShowAsync();
+    private async Task OnShowOffcanvasClick() => await _offcanvas.ShowAsync();
 
-    private async Task OnHideOffcanvasClick() => await offcanvas.HideAsync();
+    private async Task OnHideOffcanvasClick() => await _offcanvas.HideAsync();
     
     private List<MockResource> _mockResources = new()
     {
@@ -112,13 +112,13 @@
     public async Task ShowAsync()
     {
         // await LoadStatisticsAsync();
-        await offcanvas.ShowAsync();
+        await _offcanvas.ShowAsync();
         await OnShown.InvokeAsync();
     }
 
     public async Task HideAsync()
     {
-        await offcanvas.HideAsync();
+        await _offcanvas.HideAsync();
     }
 
 

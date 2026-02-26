@@ -14,7 +14,7 @@ namespace SettlementTracker.Core.Services
         Task DeleteCitizenAsync(Guid id);
         Task SaveChangesAsync();
         Task LoadFromFileAsync();
-    
+
         public event EventHandler? CitizensChange;
     }
 }

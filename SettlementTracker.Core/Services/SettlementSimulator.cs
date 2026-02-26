@@ -10,16 +10,12 @@ namespace SettlementTracker.Core.Services
 {
     public class SettlementSimulator
     {
-        private readonly SettlementState _settlement;
-        private readonly ResourceManager _resourceManager;
-        private readonly PopulationManager _populationManager;
         private readonly BuildingManager _buildingManager;
-        private readonly JobManager _jobManager;
         private readonly EfficiencyCalculator _efficiencyCalculator;
-
-        public event EventHandler<DayAdvancedEventArgs>? DayAdvanced;
-        public event EventHandler<ResourcesChangedEventArgs>? ResourcesChanged;
-        public event EventHandler<PopulationChangedEventArgs>? PopulationChanged;
+        private readonly JobManager _jobManager;
+        private readonly PopulationManager _populationManager;
+        private readonly ResourceManager _resourceManager;
+        private readonly SettlementState _settlement;
 
         public SettlementSimulator(SettlementState settlement)
         {
@@ -33,6 +29,10 @@ namespace SettlementTracker.Core.Services
             // Подписываемся на события
             _resourceManager.ResourcesChanged += (sender, e) => ResourcesChanged?.Invoke(sender, e);
         }
+
+        public event EventHandler<DayAdvancedEventArgs>? DayAdvanced;
+        public event EventHandler<ResourcesChangedEventArgs>? ResourcesChanged;
+        public event EventHandler<PopulationChangedEventArgs>? PopulationChanged;
 
         public void Initialize(
             Dictionary<string, ResourceDefinition> resourceDefinitions,
@@ -67,7 +67,7 @@ namespace SettlementTracker.Core.Services
             _settlement.CurrentDay++;
 
             // 6. Генерация событий
-            var dailySummary = GenerateDailySummary();
+            DailySummary dailySummary = GenerateDailySummary();
 
             // 7. Вызываем событие
             DayAdvanced?.Invoke(this, new DayAdvancedEventArgs(
@@ -82,11 +82,11 @@ namespace SettlementTracker.Core.Services
 
         private void ProcessBasicNeeds()
         {
-            var needs = _populationManager.CalculateDailyNeeds();
+            List<ResourceEffect> needs = _populationManager.CalculateDailyNeeds();
 
-            foreach (var need in needs)
+            foreach (ResourceEffect need in needs)
             {
-                var resourceAvailable = _resourceManager.GetResourceAmount(need.ResourceId);
+                float resourceAvailable = _resourceManager.GetResourceAmount(need.ResourceId);
                 if (_resourceManager.HasEnoughResources(new List<ResourceEffect> { need }))
                     _resourceManager.AddResource(need.ResourceId, -need.Amount);
                 else
@@ -97,7 +97,7 @@ namespace SettlementTracker.Core.Services
 
         private void ProcessBuildings()
         {
-            foreach (var building in _settlement.Buildings.Where(b => b.IsActive))
+            foreach (Building building in _settlement.Buildings.Where(b => b.IsActive))
             {
                 if (building.Definition == null) continue;
 
@@ -106,15 +106,15 @@ namespace SettlementTracker.Core.Services
                     continue;
 
                 // Рассчитываем эффективность работы группы
-                var totalEfficiency = _efficiencyCalculator.CalculateTotalEfficiency(
+                float totalEfficiency = _efficiencyCalculator.CalculateTotalEfficiency(
                     building.AssignedCitizenIds.ToList()
                 );
 
                 // Применяем дневные эффекты с учетом эффективности
                 var accumulatedResourceEffects = new List<ResourceEffect>();
-                foreach (var effect in building.Definition.DailyEffects)
+                foreach (ResourceEffect effect in building.Definition.DailyEffects)
                 {
-                    var adjustedAmount = effect.Amount * totalEfficiency;
+                    float adjustedAmount = effect.Amount * totalEfficiency;
 
                     var resourceEffect = new ResourceEffect
                     {
@@ -137,7 +137,7 @@ namespace SettlementTracker.Core.Services
                     }
                 }
 
-                foreach (var resourceEffect in accumulatedResourceEffects)
+                foreach (ResourceEffect resourceEffect in accumulatedResourceEffects)
                     if (resourceEffect.IsProduction)
                         _resourceManager.AddResources(new List<ResourceEffect> { resourceEffect });
                     else
@@ -147,7 +147,7 @@ namespace SettlementTracker.Core.Services
 
         private void ProcessJobs()
         {
-            foreach (var job in _settlement.ActiveJobs.ToList())
+            foreach (ActiveJob job in _settlement.ActiveJobs.ToList())
             {
                 if (job.Definition == null) continue;
 
@@ -156,17 +156,17 @@ namespace SettlementTracker.Core.Services
                     continue;
 
                 // Рассчитываем эффективность работы группы
-                var efficiencies = _efficiencyCalculator.CalculateWorkGroupEfficiencies(
+                Dictionary<Guid, float> efficiencies = _efficiencyCalculator.CalculateWorkGroupEfficiencies(
                     job.AssignedCitizenIds.ToList(),
                     job.Definition
                 );
 
-                var totalEfficiency = efficiencies.Values.Sum();
+                float totalEfficiency = efficiencies.Values.Sum();
 
                 // Применяем дневные эффекты с учетом эффективности
-                foreach (var effect in job.Definition.DailyEffects)
+                foreach (ResourceEffect effect in job.Definition.DailyEffects)
                 {
-                    var adjustedAmount = effect.Amount * totalEfficiency;
+                    float adjustedAmount = effect.Amount * totalEfficiency;
 
                     var resourceEffect = new ResourceEffect
                     {

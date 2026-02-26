@@ -9,16 +9,16 @@ namespace SettlementTracker.Core.Managers
 {
     public class PopulationManager
     {
-        private readonly SettlementState _settlement;
         private readonly Random _random = new();
-
-        // Вспомогательные свойства
-        public PopulationDefinition Definition { get; set; }
+        private readonly SettlementState _settlement;
 
         public PopulationManager(SettlementState settlement)
         {
             _settlement = settlement;
         }
+
+        // Вспомогательные свойства
+        public PopulationDefinition Definition { get; set; }
 
         public Citizen AddCitizen(string name, Gender gender, int age, bool isSlave = false)
         {
@@ -29,13 +29,13 @@ namespace SettlementTracker.Core.Managers
 
         public void AddRandomCitizen(bool isSlave = false)
         {
-            var gender = _random.Next(2) == 0 ? Gender.Male : Gender.Female;
-            var age = isSlave
+            Gender gender = _random.Next(2) == 0 ? Gender.Male : Gender.Female;
+            int age = isSlave
                 ? _random.Next(15, 50)
                 : // Рабы обычно взрослые
                 GetRandomAgeByDistribution();
 
-            var name = GenerateName(gender);
+            string name = GenerateName(gender);
             AddCitizen(name, gender, age, isSlave);
         }
 
@@ -44,23 +44,23 @@ namespace SettlementTracker.Core.Managers
             // Добавляем взрослых
             for (var i = 0; i < adultCount; i++)
             {
-                var gender = i % 2 == 0 ? Gender.Male : Gender.Female;
-                var age = _random.Next(20, 50);
+                Gender gender = i % 2 == 0 ? Gender.Male : Gender.Female;
+                int age = _random.Next(20, 50);
                 AddCitizen(GenerateName(gender), gender, age);
             }
 
             // Добавляем детей
             for (var i = 0; i < childrenCount; i++)
             {
-                var gender = _random.Next(2) == 0 ? Gender.Male : Gender.Female;
-                var age = _random.Next(0, 14);
+                Gender gender = _random.Next(2) == 0 ? Gender.Male : Gender.Female;
+                int age = _random.Next(0, 14);
                 AddCitizen(GenerateName(gender), gender, age);
             }
         }
 
         public void RemoveCitizen(Guid citizenId)
         {
-            var citizen = _settlement.Citizens.FirstOrDefault(c => c.Id == citizenId);
+            Citizen citizen = _settlement.Citizens.FirstOrDefault(c => c.Id == citizenId);
             if (citizen != null)
             {
                 // Снимаем с работы
@@ -71,7 +71,7 @@ namespace SettlementTracker.Core.Managers
 
         public void AgePopulation()
         {
-            foreach (var citizen in _settlement.Citizens)
+            foreach (Citizen citizen in _settlement.Citizens)
             {
                 citizen.AgeOneDay();
 
@@ -86,15 +86,15 @@ namespace SettlementTracker.Core.Managers
         public List<ResourceEffect> CalculateDailyNeeds()
         {
             var needs = new List<ResourceEffect>();
-            var livingCitizens = _settlement.Citizens.Count;
+            int livingCitizens = _settlement.Citizens.Count;
 
             // Рассчитываем общее потребление ресурсов
             // TODO: Нужен рефакторинг. PopulationDefinition нужно хранить в каком-то другом месте. Сейчас и здесь, и в Citizen. Можно забрать все методы по манипуляции возрастом из Citizen сюда, но, как-будто нарушает SRP.
-            var definitionDailyNeeds = Definition.DailyNeeds;
+            List<ResourceEffect> definitionDailyNeeds = Definition.DailyNeeds;
             if (definitionDailyNeeds != null)
-                foreach (var need in definitionDailyNeeds)
+                foreach (ResourceEffect need in definitionDailyNeeds)
                 {
-                    var totalAmount = need.Amount * livingCitizens;
+                    float totalAmount = need.Amount * livingCitizens;
                     needs.Add(new ResourceEffect
                     {
                         ResourceId = need.ResourceId,
@@ -119,8 +119,8 @@ namespace SettlementTracker.Core.Managers
 
         public void AssignCitizenToBuilding(Guid citizenId, Guid buildingId)
         {
-            var citizen = _settlement.Citizens.FirstOrDefault(c => c.Id == citizenId);
-            var building = _settlement.Buildings.FirstOrDefault(b => b.Id == buildingId);
+            Citizen citizen = _settlement.Citizens.FirstOrDefault(c => c.Id == citizenId);
+            Building building = _settlement.Buildings.FirstOrDefault(b => b.Id == buildingId);
 
             if (citizen != null && building != null)
             {
@@ -137,8 +137,8 @@ namespace SettlementTracker.Core.Managers
 
         public void AssignCitizenToJob(Guid citizenId, Guid jobId)
         {
-            var citizen = _settlement.Citizens.FirstOrDefault(c => c.Id == citizenId);
-            var job = _settlement.ActiveJobs.FirstOrDefault(j => j.Id == jobId);
+            Citizen citizen = _settlement.Citizens.FirstOrDefault(c => c.Id == citizenId);
+            ActiveJob job = _settlement.ActiveJobs.FirstOrDefault(j => j.Id == jobId);
 
             if (citizen != null && job != null)
             {
@@ -155,18 +155,18 @@ namespace SettlementTracker.Core.Managers
 
         public void UnassignCitizen(Guid citizenId)
         {
-            var citizen = _settlement.Citizens.FirstOrDefault(c => c.Id == citizenId);
+            Citizen citizen = _settlement.Citizens.FirstOrDefault(c => c.Id == citizenId);
             if (citizen == null) return;
 
             switch (citizen.WorkStatus)
             {
                 case WorkStatus.AssignedToBuilding:
-                    var building = _settlement.Buildings.FirstOrDefault(b => b.Id == citizen.AssignedToId);
+                    Building building = _settlement.Buildings.FirstOrDefault(b => b.Id == citizen.AssignedToId);
                     building?.UnassignCitizen(citizenId);
                     break;
 
                 case WorkStatus.AssignedToJob:
-                    var job = _settlement.ActiveJobs.FirstOrDefault(j => j.Id == citizen.AssignedToId);
+                    ActiveJob job = _settlement.ActiveJobs.FirstOrDefault(j => j.Id == citizen.AssignedToId);
                     job?.UnassignCitizen(citizenId);
                     break;
             }
@@ -179,8 +179,8 @@ namespace SettlementTracker.Core.Managers
 
         public void AssignCitizenToJob(Guid citizenId, Guid jobId, Guid? guardianId = null)
         {
-            var citizen = _settlement.Citizens.FirstOrDefault(c => c.Id == citizenId);
-            var job = _settlement.ActiveJobs.FirstOrDefault(j => j.Id == jobId);
+            Citizen citizen = _settlement.Citizens.FirstOrDefault(c => c.Id == citizenId);
+            ActiveJob job = _settlement.ActiveJobs.FirstOrDefault(j => j.Id == jobId);
 
             if (citizen == null) return;
             if (job == null) return;
@@ -196,8 +196,8 @@ namespace SettlementTracker.Core.Managers
 
         public void AssignCitizenToBuilding(Guid citizenId, Guid buildingId, Guid? guardianId = null)
         {
-            var citizen = _settlement.Citizens.FirstOrDefault(c => c.Id == citizenId);
-            var building = _settlement.Buildings.FirstOrDefault(j => j.Id == buildingId);
+            Citizen citizen = _settlement.Citizens.FirstOrDefault(c => c.Id == citizenId);
+            Building building = _settlement.Buildings.FirstOrDefault(j => j.Id == buildingId);
 
             if (citizen == null) return;
             if (building == null) return;
@@ -215,9 +215,10 @@ namespace SettlementTracker.Core.Managers
         {
             var stats = new PopulationStatistics();
 
-            foreach (var citizen in _settlement.Citizens)
+            foreach (Citizen citizen in _settlement.Citizens)
             {
-                var key = (citizen.AgeCategory, citizen.Gender, citizen.IsSlave);
+                (AgeCategory AgeCategory, Gender Gender, bool IsSlave) key = (citizen.AgeCategory, citizen.Gender,
+                    citizen.IsSlave);
 
                 if (!stats.Counts.ContainsKey(key)) stats.Counts[key] = 0;
 
@@ -241,7 +242,7 @@ namespace SettlementTracker.Core.Managers
         private int GetRandomAgeByDistribution()
         {
             // Упрощенное распределение возрастов
-            var r = _random.NextDouble();
+            double r = _random.NextDouble();
             if (r < 0.25) return _random.Next(0, 14); // 25% дети
             if (r < 0.85) return _random.Next(15, 59); // 60% взрослые
             return _random.Next(60, 90); // 15% старики
@@ -252,7 +253,7 @@ namespace SettlementTracker.Core.Managers
             var maleNames = new[] { "Иван", "Петр", "Алексей", "Михаил", "Дмитрий" };
             var femaleNames = new[] { "Мария", "Анна", "Екатерина", "Ольга", "Наталья" };
 
-            var names = gender == Gender.Male ? maleNames : femaleNames;
+            string[] names = gender == Gender.Male ? maleNames : femaleNames;
             return names[_random.Next(names.Length)];
         }
 

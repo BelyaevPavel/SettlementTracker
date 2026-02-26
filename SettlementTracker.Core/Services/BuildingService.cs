@@ -12,26 +12,16 @@ namespace SettlementTracker.Core.Services
 {
     public class BuildingService : IBuildingService
     {
+        private readonly string _buildingsStatePath = "State/builtBuildings.json";
+        private readonly string _definitionsPath = "Data/buildingDefinitions.json";
         private List<Building> _builtBuildings = new();
         private List<BuildingDefinition> _definitions = new();
-        private readonly string _definitionsPath = "Data/buildingDefinitions.json";
-        private readonly string _buildingsStatePath = "State/builtBuildings.json";
 
         public BuildingService()
         {
             if (!Directory.Exists("State"))
                 Directory.CreateDirectory("State");
             LoadDefinitions();
-        }
-
-        private void LoadDefinitions()
-        {
-            if (File.Exists(_definitionsPath))
-            {
-                var json = File.ReadAllText(_definitionsPath);
-                _definitions = JsonSerializer.Deserialize<List<BuildingDefinition>>(json)
-                               ?? new List<BuildingDefinition>();
-            }
         }
 
         public async Task<IEnumerable<BuildingDefinition>> GetAvailableDefinitionsAsync()
@@ -88,7 +78,7 @@ namespace SettlementTracker.Core.Services
 
         public async Task<bool> DemolishAsync(Guid buildingId)
         {
-            var building = _builtBuildings.FirstOrDefault(b => b.Id == buildingId);
+            Building building = _builtBuildings.FirstOrDefault(b => b.Id == buildingId);
             if (building == null) return false;
 
             building.UnassignAllCitizens();
@@ -98,11 +88,11 @@ namespace SettlementTracker.Core.Services
             return true;
         }
 
-        public async Task<bool> ToggleActiveAsync(Guid Id)
+        public async Task<bool> ToggleActiveAsync(Guid id)
         {
             Building? building =
                 await Task.FromResult(
-                    _builtBuildings.FirstOrDefault(b => b.Id == Id)
+                    _builtBuildings.FirstOrDefault(b => b.Id == id)
                 );
             if (building == null)
                 return false;
@@ -132,7 +122,7 @@ namespace SettlementTracker.Core.Services
                 Converters = { new TupleConverter() } // Для сериализации (int X, int Y)
             };
 
-            var json = JsonSerializer.Serialize(_builtBuildings, options);
+            string json = JsonSerializer.Serialize(_builtBuildings, options);
 
             Directory.CreateDirectory(Path.GetDirectoryName(_buildingsStatePath)!);
             await File.WriteAllTextAsync(_buildingsStatePath, json);
@@ -142,15 +132,13 @@ namespace SettlementTracker.Core.Services
         {
             if (File.Exists(_buildingsStatePath))
             {
-                var json = await File.ReadAllTextAsync(_buildingsStatePath);
-                var buildings = JsonSerializer.Deserialize<List<Building>>(json)
-                                ?? new List<Building>();
+                string json = await File.ReadAllTextAsync(_buildingsStatePath);
+                List<Building> buildings = JsonSerializer.Deserialize<List<Building>>(json)
+                                           ?? new List<Building>();
 
                 // Восстанавливаем ссылки на определения
-                foreach (var building in buildings)
-                {
+                foreach (Building building in buildings)
                     building.Definition = _definitions.FirstOrDefault(d => d.Id == building.DefinitionId);
-                }
 
                 _builtBuildings = buildings;
             }
@@ -169,6 +157,16 @@ namespace SettlementTracker.Core.Services
         }
 
         public event EventHandler? BuildingChange;
+
+        private void LoadDefinitions()
+        {
+            if (File.Exists(_definitionsPath))
+            {
+                string json = File.ReadAllText(_definitionsPath);
+                _definitions = JsonSerializer.Deserialize<List<BuildingDefinition>>(json)
+                               ?? new List<BuildingDefinition>();
+            }
+        }
     }
 
     public class TupleConverter : JsonConverterFactory

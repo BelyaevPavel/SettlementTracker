@@ -8,9 +8,6 @@ namespace SettlementTracker.Core.Tests;
 [TestFixture]
 public class EfficiencyCalculatorTests
 {
-    private SettlementState _settlement;
-    private EfficiencyCalculator _calculator;
-
     [SetUp]
     public void Setup()
     {
@@ -18,14 +15,17 @@ public class EfficiencyCalculatorTests
         _calculator = new EfficiencyCalculator(_settlement);
     }
 
+    private SettlementState _settlement;
+    private EfficiencyCalculator _calculator;
+
     [Test]
     public void CalculateCitizenEfficiency_ShouldReturnBaseEfficiency_ForAdultMaleWithoutJobDefinition()
     {
         // Arrange
-        var adultMale = TestDataGenerator.CreateAdult();
+        Citizen? adultMale = TestDataGenerator.CreateAdult();
 
         // Act
-        var efficiency = _calculator.CalculateCitizenEfficiency(adultMale);
+        float efficiency = _calculator.CalculateCitizenEfficiency(adultMale);
 
         // Assert
         Assert.That(efficiency, Is.EqualTo(1.0m));
@@ -35,7 +35,7 @@ public class EfficiencyCalculatorTests
     public void CalculateCitizenEfficiency_ShouldApplyJobSpecificEfficiency()
     {
         // Arrange
-        var adultMale = TestDataGenerator.CreateAdult();
+        Citizen? adultMale = TestDataGenerator.CreateAdult();
         var jobDefinition = new JobDefinition
         {
             BaseEfficiency = new Dictionary<string, float>
@@ -46,7 +46,7 @@ public class EfficiencyCalculatorTests
         };
 
         // Act
-        var efficiency = _calculator.CalculateCitizenEfficiency(adultMale, jobDefinition);
+        float efficiency = _calculator.CalculateCitizenEfficiency(adultMale, jobDefinition);
 
         // Assert
         Assert.That(efficiency, Is.EqualTo(1.2f));
@@ -56,10 +56,10 @@ public class EfficiencyCalculatorTests
     public void CalculateCitizenEfficiency_ShouldReduceEfficiencyForUnsupervisedChild()
     {
         // Arrange
-        var child = TestDataGenerator.CreateChild();
+        Citizen? child = TestDataGenerator.CreateChild();
 
         // Act
-        var efficiency = _calculator.CalculateCitizenEfficiency(child);
+        float efficiency = _calculator.CalculateCitizenEfficiency(child);
 
         // Assert
         Assert.That(efficiency, Is.EqualTo(0.5m)); // 50% без присмотра
@@ -69,10 +69,10 @@ public class EfficiencyCalculatorTests
     public void CalculateCitizenEfficiency_ShouldReduceEfficiencyForUnsupervisedSlave()
     {
         // Arrange
-        var slave = TestDataGenerator.CreateAdult(isSlave: true);
+        Citizen? slave = TestDataGenerator.CreateAdult(isSlave: true);
 
         // Act
-        var efficiency = _calculator.CalculateCitizenEfficiency(slave);
+        float efficiency = _calculator.CalculateCitizenEfficiency(slave);
 
         // Assert
         Assert.That(efficiency, Is.EqualTo(0.5m)); // 50% без присмотра
@@ -82,10 +82,10 @@ public class EfficiencyCalculatorTests
     public void CalculateCitizenEfficiency_ShouldReduceEfficiencyForElder()
     {
         // Arrange
-        var elder = TestDataGenerator.CreateElder();
+        Citizen? elder = TestDataGenerator.CreateElder();
 
         // Act
-        var efficiency = _calculator.CalculateCitizenEfficiency(elder);
+        float efficiency = _calculator.CalculateCitizenEfficiency(elder);
 
         // Assert
         Assert.That(efficiency, Is.EqualTo(0.7m)); // 70% для стариков
@@ -95,10 +95,10 @@ public class EfficiencyCalculatorTests
     public void CalculateCitizenEfficiency_ShouldApplyMultipleModifiers()
     {
         // Arrange
-        var elderSlave = TestDataGenerator.CreateElder(isSlave: true);
+        Citizen? elderSlave = TestDataGenerator.CreateElder(isSlave: true);
 
         // Act
-        var efficiency = _calculator.CalculateCitizenEfficiency(elderSlave);
+        float efficiency = _calculator.CalculateCitizenEfficiency(elderSlave);
 
         // Assert
         // Старик (0.7) × без присмотра (0.5) = 0.35
@@ -109,8 +109,8 @@ public class EfficiencyCalculatorTests
     public void CalculateWorkGroupEfficiencies_ShouldAssignGuardianToChildren()
     {
         // Arrange
-        var adult = TestDataGenerator.CreateAdult();
-        var child = TestDataGenerator.CreateChild();
+        Citizen? adult = TestDataGenerator.CreateAdult();
+        Citizen? child = TestDataGenerator.CreateChild();
 
         _settlement.Citizens.Add(adult);
         _settlement.Citizens.Add(child);
@@ -118,7 +118,7 @@ public class EfficiencyCalculatorTests
         var citizenIds = new List<Guid> { adult.Id, child.Id };
 
         // Act
-        var efficiencies = _calculator.CalculateWorkGroupEfficiencies(citizenIds);
+        Dictionary<Guid, float>? efficiencies = _calculator.CalculateWorkGroupEfficiencies(citizenIds);
 
         // Assert
         Assert.Multiple(() =>
@@ -133,8 +133,8 @@ public class EfficiencyCalculatorTests
     public void CalculateWorkGroupEfficiencies_ShouldNotAssignGuardian_WhenNoSupervisor()
     {
         // Arrange
-        var child1 = TestDataGenerator.CreateChild();
-        var child2 = TestDataGenerator.CreateChild();
+        Citizen? child1 = TestDataGenerator.CreateChild();
+        Citizen? child2 = TestDataGenerator.CreateChild();
 
         _settlement.Citizens.Add(child1);
         _settlement.Citizens.Add(child2);
@@ -142,7 +142,7 @@ public class EfficiencyCalculatorTests
         var citizenIds = new List<Guid> { child1.Id, child2.Id };
 
         // Act
-        var efficiencies = _calculator.CalculateWorkGroupEfficiencies(citizenIds);
+        Dictionary<Guid, float>? efficiencies = _calculator.CalculateWorkGroupEfficiencies(citizenIds);
 
         // Assert
         Assert.Multiple(() =>
@@ -158,16 +158,16 @@ public class EfficiencyCalculatorTests
     public void CalculateTotalEfficiency_ShouldSumAllEfficiencies()
     {
         // Arrange
-        var adult1 = TestDataGenerator.CreateAdult(Gender.Male);
-        var adult2 = TestDataGenerator.CreateAdult(Gender.Female);
-        var child = TestDataGenerator.CreateChild();
+        Citizen? adult1 = TestDataGenerator.CreateAdult();
+        Citizen? adult2 = TestDataGenerator.CreateAdult(Gender.Female);
+        Citizen? child = TestDataGenerator.CreateChild();
 
         _settlement.Citizens.AddRange(new[] { adult1, adult2, child });
 
         var citizenIds = new List<Guid> { adult1.Id, adult2.Id, child.Id };
 
         // Act
-        var totalEfficiency = _calculator.CalculateTotalEfficiency(citizenIds);
+        float totalEfficiency = _calculator.CalculateTotalEfficiency(citizenIds);
 
         // Assert
         // adult1: 1.0, adult2: 1.0, child: 1.0 (с присмотром) = 3.0
@@ -178,10 +178,10 @@ public class EfficiencyCalculatorTests
     public void CalculateCitizenEfficiency_ShouldNotGoBelowMinimum()
     {
         // Arrange
-        var childSlave = TestDataGenerator.CreateChild(isSlave: true);
+        Citizen? childSlave = TestDataGenerator.CreateChild(isSlave: true);
 
         // Act
-        var efficiency = _calculator.CalculateCitizenEfficiency(childSlave);
+        float efficiency = _calculator.CalculateCitizenEfficiency(childSlave);
 
         // Assert
         // Ребенок (1.0) × раб без присмотра (0.5) = 0.5, но минимально 0.1
@@ -192,9 +192,9 @@ public class EfficiencyCalculatorTests
     public void Citizen_GetEfficiencyKey_ShouldGenerateCorrectKey()
     {
         // Arrange
-        var adultMale = TestDataGenerator.CreateAdult(Gender.Male);
-        var adultFemaleSlave = TestDataGenerator.CreateAdult(Gender.Female, true);
-        var elderFemale = TestDataGenerator.CreateElder(Gender.Female);
+        Citizen? adultMale = TestDataGenerator.CreateAdult();
+        Citizen? adultFemaleSlave = TestDataGenerator.CreateAdult(Gender.Female, true);
+        Citizen? elderFemale = TestDataGenerator.CreateElder(Gender.Female);
 
         // Assert
         Assert.Multiple(() =>

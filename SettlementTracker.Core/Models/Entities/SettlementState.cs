@@ -1,10 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace SettlementTracker.Core.Models.Entities
 {
     public class SettlementState
     {
+        public SettlementState(Guid id, string name)
+        {
+            Id = id;
+            Name = name;
+        }
+
         public Guid Id { get; private set; }
         public string Name { get; set; } = "Новое поселение";
         public int CurrentDay { get; set; } = 1;
@@ -22,13 +29,6 @@ namespace SettlementTracker.Core.Models.Entities
         public Dictionary<string, float> Resources { get; set; } = new();
 
         // История изменений ресурсов за день
-        [System.Text.Json.Serialization.JsonIgnore]
-        public Dictionary<string, float> DailyResourceChanges { get; set; } = new();
-
-        public SettlementState(Guid id, string name)
-        {
-            Id = id;
-            Name = name;
-        }
+        [JsonIgnore] public Dictionary<string, float> DailyResourceChanges { get; set; } = new();
     }
 }

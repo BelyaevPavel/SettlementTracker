@@ -1,11 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using SettlementTracker.Core.Models.Definitions;
 
 namespace SettlementTracker.Core.Models.Entities
 {
     public class Building
     {
+        public Building(Guid id, string definitionId, (int X, int Y) position)
+        {
+            Id = id;
+            DefinitionId = definitionId;
+            Position = position;
+        }
+
         public Guid Id { get; private set; }
         public string DefinitionId { get; private set; }
         public string Name { get; set; } = string.Empty;
@@ -13,18 +21,10 @@ namespace SettlementTracker.Core.Models.Entities
         public bool IsActive { get; set; } = true;
 
         // Назначенные работники
-        public List<Guid> AssignedCitizenIds { get; private set; } = new();
+        public List<Guid> AssignedCitizenIds { get; } = new();
 
         // Вспомогательные свойства (будут заполняться из Definition)
-        [System.Text.Json.Serialization.JsonIgnore]
-        public BuildingDefinition? Definition { get; set; }
-
-        public Building(Guid id, string definitionId, (int X, int Y) position)
-        {
-            Id = id;
-            DefinitionId = definitionId;
-            Position = position;
-        }
+        [JsonIgnore] public BuildingDefinition? Definition { get; set; }
 
         public void AssignCitizen(Guid citizenId)
         {

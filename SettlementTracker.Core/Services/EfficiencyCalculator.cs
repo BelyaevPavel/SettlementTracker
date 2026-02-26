@@ -22,7 +22,7 @@ namespace SettlementTracker.Core.Services
 
             // Базовая эффективность по возрасту/полу
             if (jobDefinition != null &&
-                jobDefinition.BaseEfficiency.TryGetValue(citizen.GetEfficiencyKey(), out var baseEff))
+                jobDefinition.BaseEfficiency.TryGetValue(citizen.GetEfficiencyKey(), out float baseEff))
                 efficiency = baseEff;
 
             // Модификаторы для детей и рабов без присмотра
@@ -41,24 +41,24 @@ namespace SettlementTracker.Core.Services
             var efficiencies = new Dictionary<Guid, float>();
 
             // Определяем, есть ли взрослые/старики для присмотра
-            var hasSupervisor = citizenIds.Any(id =>
+            bool hasSupervisor = citizenIds.Any(id =>
             {
-                var citizen = _settlement.Citizens.FirstOrDefault(c => c.Id == id);
+                Citizen citizen = _settlement.Citizens.FirstOrDefault(c => c.Id == id);
                 return citizen != null &&
                        (citizen.AgeCategory == AgeCategory.Adult || citizen.AgeCategory == AgeCategory.Elder) &&
                        !citizen.IsSlave;
             });
 
-            foreach (var citizenId in citizenIds)
+            foreach (Guid citizenId in citizenIds)
             {
-                var citizen = _settlement.Citizens.FirstOrDefault(c => c.Id == citizenId);
+                Citizen citizen = _settlement.Citizens.FirstOrDefault(c => c.Id == citizenId);
                 if (citizen == null) continue;
 
                 // Если есть присмотр, назначаем опекуна детям и рабам
                 if (hasSupervisor && (citizen.AgeCategory == AgeCategory.Child || citizen.IsSlave))
                 {
                     // Назначаем первого подходящего опекуна
-                    var guardian = citizenIds
+                    Citizen guardian = citizenIds
                         .Select(id => _settlement.Citizens.FirstOrDefault(c => c.Id == id))
                         .FirstOrDefault(c => c != null &&
                                              (c.AgeCategory == AgeCategory.Adult ||
@@ -76,20 +76,20 @@ namespace SettlementTracker.Core.Services
 
         public float CalculateTotalEfficiency(List<Guid> citizenIds, JobDefinition? jobDefinition = null)
         {
-            var efficiencies = CalculateWorkGroupEfficiencies(citizenIds, jobDefinition);
+            Dictionary<Guid, float> efficiencies = CalculateWorkGroupEfficiencies(citizenIds, jobDefinition);
             return efficiencies.Values.Sum();
         }
     }
 
     public class DayAdvancedEventArgs : EventArgs
     {
-        public int Day { get; }
-        public DailySummary Summary { get; }
-
         public DayAdvancedEventArgs(int day, DailySummary summary)
         {
             Day = day;
             Summary = summary;
         }
+
+        public int Day { get; }
+        public DailySummary Summary { get; }
     }
 }

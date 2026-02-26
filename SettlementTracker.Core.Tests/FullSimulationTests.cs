@@ -1,4 +1,8 @@
-﻿using SettlementTracker.Core.Models.Enums;
+﻿using System.Text.Json;
+using SettlementTracker.Core.Managers;
+using SettlementTracker.Core.Models.Definitions;
+using SettlementTracker.Core.Models.Entities;
+using SettlementTracker.Core.Models.Enums;
 
 namespace SettlementTracker.Core.Tests;
 
@@ -42,7 +46,7 @@ public class FullSimulationTests
         }
     }
 
-   // [Test]
+    // [Test]
     public void FullGameFlow_ShouldWorkCorrectly()
     {
         // Arrange
@@ -51,7 +55,7 @@ public class FullSimulationTests
         // Act - Создаем новую игру
         _game.StartNewGame(settlementName);
 
-        var settlement = _game.Settlement;
+        SettlementState? settlement = _game.Settlement;
 
         // Проверяем начальное состояние
         Assert.That(settlement.Name, Is.EqualTo(settlementName));
@@ -59,22 +63,22 @@ public class FullSimulationTests
         Assert.That(settlement.Resources["food"], Is.GreaterThan(0));
 
         // Строим здание
-        var buildingManager = _game.Simulator.GetBuildingManager();
-        var building = buildingManager.BuildBuilding("house", (1, 1));
+        BuildingManager? buildingManager = _game.Simulator.GetBuildingManager();
+        Building? building = buildingManager.BuildBuilding("house", (1, 1));
 
         Assert.That(building, Is.Not.Null);
         Assert.That(settlement.Buildings.Count, Is.EqualTo(1));
 
         // Создаем задание
-        var jobManager = _game.Simulator.GetJobManager();
-        var job = jobManager.CreateJob("hunting");
+        JobManager? jobManager = _game.Simulator.GetJobManager();
+        ActiveJob? job = jobManager.CreateJob("hunting");
 
         Assert.That(job, Is.Not.Null);
         Assert.That(settlement.ActiveJobs.Count, Is.EqualTo(1));
 
         // Назначаем работников
-        var populationManager = _game.Simulator.GetPopulationManager();
-        var availableAdultMale = settlement.Citizens
+        PopulationManager? populationManager = _game.Simulator.GetPopulationManager();
+        Citizen? availableAdultMale = settlement.Citizens
             .First(c => c.AgeCategory == AgeCategory.Adult &&
                         c.Gender == Gender.Male &&
                         c.WorkStatus == WorkStatus.Idle);
@@ -92,8 +96,8 @@ public class FullSimulationTests
         var dayEvents = 0;
         _game.DayAdvanced += (sender, args) => dayEvents++;
 
-        var initialDay = settlement.CurrentDay;
-        var initialFood = settlement.Resources["food"];
+        int initialDay = settlement.CurrentDay;
+        float initialFood = settlement.Resources["food"];
 
         _game.AdvanceDay();
 
@@ -108,7 +112,7 @@ public class FullSimulationTests
 
         // Загружаем игру
         var newGame = new SettlementGame(_testDataPath, _testSavePath);
-        var loaded = newGame.LoadGame("integration_test.json");
+        bool loaded = newGame.LoadGame("integration_test.json");
 
         Assert.That(loaded, Is.True);
         Assert.That(newGame.Settlement.Name, Is.EqualTo(settlementName));
@@ -120,20 +124,20 @@ public class FullSimulationTests
     {
         // Arrange
         _game.StartNewGame("Efficiency Test");
-        var settlement = _game.Settlement;
+        SettlementState? settlement = _game.Settlement;
 
         // Добавляем разнообразное население
-        var populationManager = _game.Simulator.GetPopulationManager();
+        PopulationManager? populationManager = _game.Simulator.GetPopulationManager();
 
-        var adultMale = populationManager.AddCitizen("Worker1", Gender.Male, 25);
-        var adultFemale = populationManager.AddCitizen("Worker2", Gender.Female, 30);
-        var child = populationManager.AddCitizen("Child", Gender.Male, 10);
-        var slave = populationManager.AddCitizen("Slave", Gender.Male, 35, true);
-        var elder = populationManager.AddCitizen("Elder", Gender.Female, 70);
+        Citizen? adultMale = populationManager.AddCitizen("Worker1", Gender.Male, 25);
+        Citizen? adultFemale = populationManager.AddCitizen("Worker2", Gender.Female, 30);
+        Citizen? child = populationManager.AddCitizen("Child", Gender.Male, 10);
+        Citizen? slave = populationManager.AddCitizen("Slave", Gender.Male, 35, true);
+        Citizen? elder = populationManager.AddCitizen("Elder", Gender.Female, 70);
 
         // Создаем ферму
-        var buildingManager = _game.Simulator.GetBuildingManager();
-        var farm = buildingManager.BuildBuilding("farm", (2, 2));
+        BuildingManager? buildingManager = _game.Simulator.GetBuildingManager();
+        Building? farm = buildingManager.BuildBuilding("farm", (2, 2));
 
         Assert.That(farm, Is.Not.Null);
 
@@ -145,15 +149,15 @@ public class FullSimulationTests
         populationManager.AssignCitizenToBuilding(child.Id, farm.Id);
         populationManager.AssignCitizenToBuilding(slave.Id, farm.Id);
 
-        var initialFood = settlement.Resources["food"];
-        var initialWater = settlement.Resources["water"];
+        float initialFood = settlement.Resources["food"];
+        float initialWater = settlement.Resources["water"];
 
         // Act - Прогрессируем день
         _game.AdvanceDay();
 
         // Assert
         // Проверяем, что эффективность была рассчитана и применена
-        var dailyChanges = _game.Simulator.GetResourceManager().GetDailyResourceChanges();
+        Dictionary<string, float>? dailyChanges = _game.Simulator.GetResourceManager().GetDailyResourceChanges();
 
         Assert.Multiple(() =>
         {
@@ -167,18 +171,18 @@ public class FullSimulationTests
         });
     }
 
- //   [Test]
+    //   [Test]
     public void ResourceShortage_ShouldAffectSimulation()
     {
         // Arrange
         _game.StartNewGame("Shortage Test");
-        var settlement = _game.Settlement;
+        SettlementState? settlement = _game.Settlement;
 
         // Создаем ситуацию с нехваткой ресурсов
         settlement.Resources["food"] = 1; // Очень мало еды
         settlement.Resources["water"] = 1; // Очень мало воды
 
-        var populationCount = settlement.Citizens.Count;
+        int populationCount = settlement.Citizens.Count;
 
         // Act - Прогрессируем несколько дней
         for (var i = 0; i < 3; i++) _game.AdvanceDay();
@@ -193,21 +197,21 @@ public class FullSimulationTests
     private void CreateTestDefinitionFiles()
     {
         // Ресурсы
-        var resources = TestDataGenerator.CreateResourceDefinitions();
-        var resourcesJson = System.Text.Json.JsonSerializer.Serialize(resources.Values,
-            new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+        Dictionary<string, ResourceDefinition>? resources = TestDataGenerator.CreateResourceDefinitions();
+        string? resourcesJson = JsonSerializer.Serialize(resources.Values,
+            new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(Path.Combine(_testDataPath, "resources.json"), resourcesJson);
 
         // Здания
-        var buildings = TestDataGenerator.CreateBuildingDefinitions();
-        var buildingsJson = System.Text.Json.JsonSerializer.Serialize(buildings.Values,
-            new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+        Dictionary<string, BuildingDefinition>? buildings = TestDataGenerator.CreateBuildingDefinitions();
+        string? buildingsJson = JsonSerializer.Serialize(buildings.Values,
+            new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(Path.Combine(_testDataPath, "buildings.json"), buildingsJson);
 
         // Задания
-        var jobs = TestDataGenerator.CreateJobDefinitions();
-        var jobsJson = System.Text.Json.JsonSerializer.Serialize(jobs.Values,
-            new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+        Dictionary<string, JobDefinition>? jobs = TestDataGenerator.CreateJobDefinitions();
+        string? jobsJson = JsonSerializer.Serialize(jobs.Values,
+            new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(Path.Combine(_testDataPath, "jobs.json"), jobsJson);
     }
 }

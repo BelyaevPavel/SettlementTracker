@@ -5,11 +5,11 @@ namespace SettlementTracker.Core.Services
 {
     public class PopulationChangedEventArgs : EventArgs
     {
-        public PopulationStatistics Statistics { get; }
-
         public PopulationChangedEventArgs(PopulationStatistics statistics)
         {
             Statistics = statistics;
         }
+
+        public PopulationStatistics Statistics { get; }
     }
 }

@@ -1,5 +1,7 @@
 ﻿using SettlementTracker.Core.Managers;
+using SettlementTracker.Core.Models.Definitions;
 using SettlementTracker.Core.Models.Entities;
+using SettlementTracker.Core.Models.Enums;
 using SettlementTracker.Core.Services;
 
 namespace SettlementTracker.Core.Tests;
@@ -7,28 +9,28 @@ namespace SettlementTracker.Core.Tests;
 [TestFixture]
 public class SettlementSimulatorTests
 {
-    private SettlementState _settlement;
-    private SettlementSimulator _simulator;
-
     [SetUp]
     public void Setup()
     {
         _settlement = TestDataGenerator.CreateTestSettlement();
         _simulator = new SettlementSimulator(_settlement);
 
-        var resourceDefinitions = TestDataGenerator.CreateResourceDefinitions();
-        var buildingDefinitions = TestDataGenerator.CreateBuildingDefinitions();
-        var jobDefinitions = TestDataGenerator.CreateJobDefinitions();
-        var populationDefinition = TestDataGenerator.CreateDefaultPopulationDefinition();
+        Dictionary<string, ResourceDefinition>? resourceDefinitions = TestDataGenerator.CreateResourceDefinitions();
+        Dictionary<string, BuildingDefinition>? buildingDefinitions = TestDataGenerator.CreateBuildingDefinitions();
+        Dictionary<string, JobDefinition>? jobDefinitions = TestDataGenerator.CreateJobDefinitions();
+        PopulationDefinition? populationDefinition = TestDataGenerator.CreateDefaultPopulationDefinition();
 
         _simulator.Initialize(resourceDefinitions, buildingDefinitions, jobDefinitions, populationDefinition);
     }
+
+    private SettlementState _settlement;
+    private SettlementSimulator _simulator;
 
     [Test]
     public void AdvanceToNextDay_ShouldIncrementDayCounter()
     {
         // Arrange
-        var initialDay = _settlement.CurrentDay;
+        int initialDay = _settlement.CurrentDay;
 
         // Act
         _simulator.AdvanceToNextDay();
@@ -41,30 +43,29 @@ public class SettlementSimulatorTests
     public void AdvanceToNextDay_ShouldAgePopulation()
     {
         // Arrange
-        var initialAges = _settlement.Citizens.ToDictionary(c => c.Id, c => c.Age);
+        Dictionary<Guid, float>? initialAges = _settlement.Citizens.ToDictionary(c => c.Id, c => c.Age);
 
-        var agePerDay = TestDataGenerator.CreateDefaultPopulationDefinition().AgePerDay;
+        float agePerDay = TestDataGenerator.CreateDefaultPopulationDefinition().AgePerDay;
 
         // Act
         _simulator.AdvanceToNextDay();
 
         // Assert
-        foreach (var citizen in _settlement.Citizens)
+        foreach (Citizen? citizen in _settlement.Citizens)
             Assert.That(citizen.Age, Is.EqualTo(initialAges[citizen.Id] + agePerDay));
     }
 
-   // [Test]
+    // [Test]
     public void AdvanceToNextDay_ShouldProcessBasicNeeds()
     {
         // Arrange
-        var initialFood = _settlement.Resources["food"];
-        var populationCount = _settlement.Citizens.Count;
+        float initialFood = _settlement.Resources["food"];
+        int populationCount = _settlement.Citizens.Count;
 
-        var dailyNeeds = TestDataGenerator.CreateDefaultPopulationDefinition().DailyNeeds;
+        List<ResourceEffect>? dailyNeeds = TestDataGenerator.CreateDefaultPopulationDefinition().DailyNeeds;
 
-        foreach (var need in dailyNeeds)
+        foreach (ResourceEffect? need in dailyNeeds)
         {
-            
         }
 
         // Act
@@ -75,12 +76,12 @@ public class SettlementSimulatorTests
         Assert.That(_settlement.Resources["food"], Is.EqualTo(initialFood - populationCount));
     }
 
-   // [Test]
+    // [Test]
     public void AdvanceToNextDay_ShouldProcessBuildingsWithWorkers()
     {
         // Arrange
         // Создаем ферму и назначаем работников
-        var farmDefinition = TestDataGenerator.CreateBuildingDefinitions()["farm"];
+        BuildingDefinition? farmDefinition = TestDataGenerator.CreateBuildingDefinitions()["farm"];
         var farm = new Building(Guid.NewGuid(), "farm", (0, 0))
         {
             Definition = farmDefinition,
@@ -88,29 +89,29 @@ public class SettlementSimulatorTests
         };
 
         // Назначаем работников, удовлетворяющих требованиям
-        var adultMale = _settlement.Citizens.First(c =>
-            c.AgeCategory == Models.Enums.AgeCategory.Adult &&
-            c.Gender == Models.Enums.Gender.Male);
+        Citizen? adultMale = _settlement.Citizens.First(c =>
+            c.AgeCategory == AgeCategory.Adult &&
+            c.Gender == Gender.Male);
 
-        var adultFemale = _settlement.Citizens.First(c =>
-            c.AgeCategory == Models.Enums.AgeCategory.Adult &&
-            c.Gender == Models.Enums.Gender.Female);
+        Citizen? adultFemale = _settlement.Citizens.First(c =>
+            c.AgeCategory == AgeCategory.Adult &&
+            c.Gender == Gender.Female);
 
         farm.AssignCitizen(adultMale.Id);
         farm.AssignCitizen(adultFemale.Id);
 
-        adultMale.WorkStatus = Models.Enums.WorkStatus.AssignedToBuilding;
+        adultMale.WorkStatus = WorkStatus.AssignedToBuilding;
         adultMale.AssignedToId = farm.Id;
         adultMale.AssignedToType = "Building";
 
-        adultFemale.WorkStatus = Models.Enums.WorkStatus.AssignedToBuilding;
+        adultFemale.WorkStatus = WorkStatus.AssignedToBuilding;
         adultFemale.AssignedToId = farm.Id;
         adultFemale.AssignedToType = "Building";
 
         _settlement.Buildings.Add(farm);
 
-        var initialFood = _settlement.Resources["food"];
-        var initialWater = _settlement.Resources["water"];
+        float initialFood = _settlement.Resources["food"];
+        float initialWater = _settlement.Resources["water"];
 
         // Act
         _simulator.AdvanceToNextDay();
@@ -128,7 +129,7 @@ public class SettlementSimulatorTests
     public void AdvanceToNextDay_ShouldNotProcessBuildingsWithoutRequiredWorkers()
     {
         // Arrange
-        var farmDefinition = TestDataGenerator.CreateBuildingDefinitions()["farm"];
+        BuildingDefinition? farmDefinition = TestDataGenerator.CreateBuildingDefinitions()["farm"];
         var farm = new Building(Guid.NewGuid(), "farm", (0, 0))
         {
             Definition = farmDefinition,
@@ -136,18 +137,18 @@ public class SettlementSimulatorTests
         };
 
         // Назначаем только одного работника (требуется 2)
-        var adultMale = _settlement.Citizens.First(c =>
-            c.AgeCategory == Models.Enums.AgeCategory.Adult &&
-            c.Gender == Models.Enums.Gender.Male);
+        Citizen? adultMale = _settlement.Citizens.First(c =>
+            c.AgeCategory == AgeCategory.Adult &&
+            c.Gender == Gender.Male);
 
         farm.AssignCitizen(adultMale.Id);
-        adultMale.WorkStatus = Models.Enums.WorkStatus.AssignedToBuilding;
+        adultMale.WorkStatus = WorkStatus.AssignedToBuilding;
         adultMale.AssignedToId = farm.Id;
         adultMale.AssignedToType = "Building";
 
         _settlement.Buildings.Add(farm);
 
-        var initialFood = _settlement.Resources["food"];
+        float initialFood = _settlement.Resources["food"];
 
         // Act
         _simulator.AdvanceToNextDay();
@@ -200,7 +201,7 @@ public class SettlementSimulatorTests
         // Assert
         // Дневные изменения должны быть очищены перед обработкой нового дня
         // Проверяем, что изменения не накапливаются от предыдущего дня
-        var dailyChanges = _simulator.GetResourceManager().GetDailyResourceChanges();
+        Dictionary<string, float>? dailyChanges = _simulator.GetResourceManager().GetDailyResourceChanges();
 
         // Изменения должны быть только от текущего дня
         Assert.That(dailyChanges["food"], Is.Not.EqualTo(100));
@@ -210,7 +211,7 @@ public class SettlementSimulatorTests
     public void AdvanceToNextDay_ShouldHandleInsufficientResourcesForBuildingConsumption()
     {
         // Arrange
-        var farmDefinition = TestDataGenerator.CreateBuildingDefinitions()["farm"];
+        BuildingDefinition? farmDefinition = TestDataGenerator.CreateBuildingDefinitions()["farm"];
         var farm = new Building(Guid.NewGuid(), "farm", (0, 0))
         {
             Definition = farmDefinition,
@@ -218,22 +219,22 @@ public class SettlementSimulatorTests
         };
 
         // Назначаем работников
-        var adultMale = _settlement.Citizens.First(c =>
-            c.AgeCategory == Models.Enums.AgeCategory.Adult &&
-            c.Gender == Models.Enums.Gender.Male);
+        Citizen? adultMale = _settlement.Citizens.First(c =>
+            c.AgeCategory == AgeCategory.Adult &&
+            c.Gender == Gender.Male);
 
-        var adultFemale = _settlement.Citizens.First(c =>
-            c.AgeCategory == Models.Enums.AgeCategory.Adult &&
-            c.Gender == Models.Enums.Gender.Female);
+        Citizen? adultFemale = _settlement.Citizens.First(c =>
+            c.AgeCategory == AgeCategory.Adult &&
+            c.Gender == Gender.Female);
 
         farm.AssignCitizen(adultMale.Id);
         farm.AssignCitizen(adultFemale.Id);
 
-        adultMale.WorkStatus = Models.Enums.WorkStatus.AssignedToBuilding;
+        adultMale.WorkStatus = WorkStatus.AssignedToBuilding;
         adultMale.AssignedToId = farm.Id;
         adultMale.AssignedToType = "Building";
 
-        adultFemale.WorkStatus = Models.Enums.WorkStatus.AssignedToBuilding;
+        adultFemale.WorkStatus = WorkStatus.AssignedToBuilding;
         adultFemale.AssignedToId = farm.Id;
         adultFemale.AssignedToType = "Building";
 
@@ -241,7 +242,7 @@ public class SettlementSimulatorTests
 
         // Устанавливаем недостаточно воды для потребления зданием
         _settlement.Resources["water"] = 1;
-        var initialFood = _settlement.Resources["food"];
+        float initialFood = _settlement.Resources["food"];
 
         // Act
         _simulator.AdvanceToNextDay();
@@ -256,9 +257,9 @@ public class SettlementSimulatorTests
     public void GetManagers_ShouldReturnCorrectInstances()
     {
         // Act
-        var resourceManager = _simulator.GetResourceManager();
-        var populationManager = _simulator.GetPopulationManager();
-        var buildingManager = _simulator.GetBuildingManager();
+        ResourceManager? resourceManager = _simulator.GetResourceManager();
+        PopulationManager? populationManager = _simulator.GetPopulationManager();
+        BuildingManager? buildingManager = _simulator.GetBuildingManager();
 
         // Assert
         Assert.Multiple(() =>

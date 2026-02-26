@@ -13,11 +13,11 @@ namespace SettlementTracker.Core.Services
 {
     public class SettlementResourcesService : ISettlementResourcesService
     {
-        private readonly object _lock = new object();
         private readonly IResourceDefinitionRepository _definitionRepository;
+        private readonly object _lock = new();
+        private readonly string _stateFilePath;
         private Dictionary<string, ResourceDefinition> _definitions;
         private Dictionary<string, float> _resources;
-        private readonly string _stateFilePath;
 
         public SettlementResourcesService(IResourceDefinitionRepository definitionRepository,
             string stateFilePath = "State\\resources.json")
@@ -29,12 +29,6 @@ namespace SettlementTracker.Core.Services
             LoadDefinitionsAsync();
         }
 
-        private async Task OnResourcesChanged()
-        {
-            await SaveChangesAsync();
-            ResourcesChanged?.Invoke(this, new ResourcesChangedEventArgs(_resources));
-        }
-
         public async Task LoadDefinitionsAsync()
         {
             _definitions = await _definitionRepository.LoadResourceDefinitionsAsync();
@@ -43,36 +37,8 @@ namespace SettlementTracker.Core.Services
             lock (_lock)
             {
                 _resources = new Dictionary<string, float>();
-                foreach (var resourceDef in _definitions.Values)
+                foreach (ResourceDefinition resourceDef in _definitions.Values)
                     _resources[resourceDef.Id] = 0;
-            }
-        }
-
-        public async Task SaveChangesAsync()
-        {
-            var options = new JsonSerializerOptions { WriteIndented = true };
-            string json;
-
-            lock (_lock)
-            {
-                json = JsonSerializer.Serialize(_resources, options);
-            }
-
-            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(_stateFilePath))!);
-            await File.WriteAllTextAsync(_stateFilePath, json);
-        }
-
-        public async Task LoadFromFileAsync()
-        {
-            if (File.Exists(_stateFilePath))
-            {
-                var json = await File.ReadAllTextAsync(_stateFilePath);
-
-                lock (_lock)
-                {
-                    _resources = JsonSerializer.Deserialize<Dictionary<string, float>>(json) ??
-                                 new Dictionary<string, float>();
-                }
             }
         }
 
@@ -120,7 +86,7 @@ namespace SettlementTracker.Core.Services
             ArgumentOutOfRangeException.ThrowIfNegative(amount);
             lock (_lock)
             {
-                if (!_resources.TryGetValue(resourceId, out var resource))
+                if (!_resources.TryGetValue(resourceId, out float resource))
                     throw new ArgumentException(null, nameof(resourceId));
 
                 return resource >= amount;
@@ -132,6 +98,40 @@ namespace SettlementTracker.Core.Services
         public Task ApplyDailyEffectsAsync(IEnumerable<ResourceEffect> dailyEffects)
         {
             throw new NotImplementedException();
+        }
+
+        private async Task OnResourcesChanged()
+        {
+            await SaveChangesAsync();
+            ResourcesChanged?.Invoke(this, new ResourcesChangedEventArgs(_resources));
+        }
+
+        public async Task SaveChangesAsync()
+        {
+            var options = new JsonSerializerOptions { WriteIndented = true };
+            string json;
+
+            lock (_lock)
+            {
+                json = JsonSerializer.Serialize(_resources, options);
+            }
+
+            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(_stateFilePath))!);
+            await File.WriteAllTextAsync(_stateFilePath, json);
+        }
+
+        public async Task LoadFromFileAsync()
+        {
+            if (File.Exists(_stateFilePath))
+            {
+                string json = await File.ReadAllTextAsync(_stateFilePath);
+
+                lock (_lock)
+                {
+                    _resources = JsonSerializer.Deserialize<Dictionary<string, float>>(json) ??
+                                 new Dictionary<string, float>();
+                }
+            }
         }
 
         public async Task SetResourceAsync(string resourceId, float amount)

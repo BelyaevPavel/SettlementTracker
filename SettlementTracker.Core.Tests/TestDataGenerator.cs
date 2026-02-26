@@ -1,5 +1,4 @@
-﻿using SettlementTracker.Core.Managers;
-using SettlementTracker.Core.Models.Definitions;
+﻿using SettlementTracker.Core.Models.Definitions;
 using SettlementTracker.Core.Models.Entities;
 using SettlementTracker.Core.Models.Enums;
 
@@ -19,11 +18,11 @@ public static class TestDataGenerator
         // Добавляем тестовых жителей
         var citizens = new List<Citizen>
         {
-            CreateAdult(Gender.Male, false),
-            CreateAdult(Gender.Female, false),
-            CreateChild(Gender.Male, false),
+            CreateAdult(),
+            CreateAdult(Gender.Female),
+            CreateChild(),
             CreateAdult(Gender.Male, true),
-            CreateElder(Gender.Male, false)
+            CreateElder()
         };
 
         settlement.Citizens.AddRange(citizens);

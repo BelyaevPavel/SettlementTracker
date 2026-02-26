@@ -1,4 +1,5 @@
 ﻿using SettlementTracker.Core.Managers;
+using SettlementTracker.Core.Models.Definitions;
 using SettlementTracker.Core.Models.Entities;
 using SettlementTracker.Core.Models.Enums;
 
@@ -7,9 +8,6 @@ namespace SettlementTracker.Core.Tests;
 [TestFixture]
 public class PopulationManagerTests
 {
-    private SettlementState _settlement;
-    private PopulationManager _populationManager;
-
     [SetUp]
     public void Setup()
     {
@@ -17,14 +15,17 @@ public class PopulationManagerTests
         _populationManager = new PopulationManager(_settlement);
     }
 
+    private SettlementState _settlement;
+    private PopulationManager _populationManager;
+
     [Test]
     public void AddCitizen_ShouldAddCitizenToSettlement()
     {
         // Arrange
-        var initialCount = _settlement.Citizens.Count;
+        int initialCount = _settlement.Citizens.Count;
 
         // Act
-        var citizen = _populationManager.AddCitizen("New Citizen", Gender.Male, 30);
+        Citizen? citizen = _populationManager.AddCitizen("New Citizen", Gender.Male, 30);
 
         // Assert
         Assert.Multiple(() =>
@@ -41,7 +42,7 @@ public class PopulationManagerTests
     public void AddFamily_ShouldAddCorrectNumberOfCitizens()
     {
         // Arrange
-        var initialCount = _settlement.Citizens.Count;
+        int initialCount = _settlement.Citizens.Count;
         const int adults = 2;
         const int children = 3;
 
@@ -56,7 +57,7 @@ public class PopulationManagerTests
     public void RemoveCitizen_ShouldRemoveCitizen_AndUnassignFromWork()
     {
         // Arrange
-        var citizen = _settlement.Citizens[0];
+        Citizen? citizen = _settlement.Citizens[0];
         citizen.WorkStatus = WorkStatus.AssignedToBuilding;
         ;
 
@@ -76,7 +77,7 @@ public class PopulationManagerTests
     public void RemoveCitizen_ShouldRemoveCitizen_AndUnassignFromJob()
     {
         // Arrange
-        var citizen = _settlement.Citizens[0];
+        Citizen? citizen = _settlement.Citizens[0];
         citizen.WorkStatus = WorkStatus.AssignedToBuilding;
         ;
 
@@ -96,15 +97,15 @@ public class PopulationManagerTests
     public void AgePopulation_ShouldIncreaseAgeOfAllCitizens()
     {
         // Arrange
-        var initialAges = _settlement.Citizens.ToDictionary(c => c.Id, c => c.Age);
+        Dictionary<Guid, float>? initialAges = _settlement.Citizens.ToDictionary(c => c.Id, c => c.Age);
 
-        var agePerDay = TestDataGenerator.CreateDefaultPopulationDefinition().AgePerDay;
+        float agePerDay = TestDataGenerator.CreateDefaultPopulationDefinition().AgePerDay;
 
         // Act
         _populationManager.AgePopulation();
 
         // Assert
-        foreach (var citizen in _settlement.Citizens)
+        foreach (Citizen? citizen in _settlement.Citizens)
             Assert.That(citizen.Age, Is.EqualTo(initialAges[citizen.Id] + agePerDay));
     }
 
@@ -112,7 +113,7 @@ public class PopulationManagerTests
     public void FindAvailableWorkers_ShouldReturnOnlyMatchingCitizens()
     {
         // Arrange
-        var requirement = new Models.Definitions.WorkerRequirement
+        var requirement = new WorkerRequirement
         {
             AgeCategory = AgeCategory.Adult,
             Gender = Gender.Male,
@@ -122,7 +123,7 @@ public class PopulationManagerTests
         };
 
         // Act
-        var availableWorkers = _populationManager.FindAvailableWorkers(requirement);
+        List<Citizen>? availableWorkers = _populationManager.FindAvailableWorkers(requirement);
 
         // Assert
         Assert.That(availableWorkers, Has.All.Property("AgeCategory").EqualTo(AgeCategory.Adult));
@@ -135,7 +136,7 @@ public class PopulationManagerTests
     public void AssignCitizenToBuilding_ShouldUpdateCitizenStatus_AndBuildingAssignment()
     {
         // Arrange
-        var citizen = _settlement.Citizens[0];
+        Citizen? citizen = _settlement.Citizens[0];
         var building = new Building(Guid.NewGuid(), "test", (0, 0));
         _settlement.Buildings.Add(building);
 
@@ -156,7 +157,7 @@ public class PopulationManagerTests
     public void UnassignCitizen_ShouldResetCitizenStatus_AndRemoveFromAssignment()
     {
         // Arrange
-        var citizen = _settlement.Citizens[0];
+        Citizen? citizen = _settlement.Citizens[0];
         var building = new Building(Guid.NewGuid(), "test", (0, 0));
         building.AssignCitizen(citizen.Id);
         _settlement.Buildings.Add(building);
@@ -185,19 +186,19 @@ public class PopulationManagerTests
         // В тестовых данных есть: 1 взрослый мужчина, 1 взрослая женщина, 1 ребенок, 1 раб, 1 старик
 
         // Act
-        var stats = _populationManager.GetPopulationStatistics();
+        PopulationStatistics? stats = _populationManager.GetPopulationStatistics();
 
         // Assert
         Assert.Multiple(() =>
         {
             Assert.That(stats.TotalPopulation, Is.EqualTo(5));
 
-            var adultMaleCount = stats.Counts.FirstOrDefault(kvp =>
+            int adultMaleCount = stats.Counts.FirstOrDefault(kvp =>
                 kvp.Key.Age == AgeCategory.Adult &&
                 kvp.Key.Gender == Gender.Male &&
                 kvp.Key.IsSlave == false).Value;
 
-            var adultFemaleCount = stats.Counts.FirstOrDefault(kvp =>
+            int adultFemaleCount = stats.Counts.FirstOrDefault(kvp =>
                 kvp.Key.Age == AgeCategory.Adult &&
                 kvp.Key.Gender == Gender.Female &&
                 kvp.Key.IsSlave == false).Value;
@@ -211,9 +212,9 @@ public class PopulationManagerTests
     public void Citizen_AgeCategory_ShouldBeCalculatedCorrectly()
     {
         // Arrange
-        var child = TestDataGenerator.CreateChild();
-        var adult = TestDataGenerator.CreateAdult();
-        var elder = TestDataGenerator.CreateElder();
+        Citizen? child = TestDataGenerator.CreateChild();
+        Citizen? adult = TestDataGenerator.CreateAdult();
+        Citizen? elder = TestDataGenerator.CreateElder();
 
         // Assert
         Assert.Multiple(() =>

@@ -13,15 +13,15 @@
 <h1>Управление горожанами</h1>
 
 <Progress Class="mb-3">
-    <ProgressBar Color="ProgressColor.Info" Width="@childRatio"/>
-    <ProgressBar Color="ProgressColor.Success" Width="@adultRatio"/>
-    <ProgressBar Color="ProgressColor.Warning" Width="@elderRatio"/>
-    <ProgressBar Color="ProgressColor.Danger" Width="@slaveRatio"/>
+    <ProgressBar Color="ProgressColor.Info" Width="@_childRatio"/>
+    <ProgressBar Color="ProgressColor.Success" Width="@_adultRatio"/>
+    <ProgressBar Color="ProgressColor.Warning" Width="@_elderRatio"/>
+    <ProgressBar Color="ProgressColor.Danger" Width="@_slaveRatio"/>
 </Progress>
 
 <Progress Class="mb-3">
-    <ProgressBar Color="ProgressColor.Info" Width="@maleRatio"/>
-    <ProgressBar Color="ProgressColor.Success" Width="@(1 - maleRatio)"/>
+    <ProgressBar Color="ProgressColor.Info" Width="@_maleRatio"/>
+    <ProgressBar Color="ProgressColor.Success" Width="@(1 - _maleRatio)"/>
 </Progress>
 
 <div class="mb-3">
@@ -252,11 +252,11 @@ else
     private bool _showGenerateDialog = false;
     private Citizen _editingCitizen = new(Guid.NewGuid(), "", Gender.Male, 0);
 
-    private float childRatio;
-    private float adultRatio;
-    private float elderRatio;
-    private float slaveRatio;
-    private float maleRatio;
+    private float _childRatio;
+    private float _adultRatio;
+    private float _elderRatio;
+    private float _slaveRatio;
+    private float _maleRatio;
 
     private Gender _generationGender;
     private string _generationRace = "Goblin";
@@ -290,11 +290,11 @@ else
         var freeCitizens = _citizens.Where(x => !x.IsSlave);
 
         float citizensCount = _citizens.Count();
-        childRatio = freeCitizens.Count(x => x.AgeCategory == AgeCategory.Child) / citizensCount * 100;
-        adultRatio = freeCitizens.Count(x => x.AgeCategory == AgeCategory.Adult) / citizensCount * 100;
-        elderRatio = freeCitizens.Count(x => x.AgeCategory == AgeCategory.Elder) / citizensCount * 100;
-        slaveRatio = (citizensCount - freeCitizens.Count()) / citizensCount * 100;
-        maleRatio = _citizens.Count(x => x.Gender == Gender.Male) / citizensCount * 100;
+        _childRatio = freeCitizens.Count(x => x.AgeCategory == AgeCategory.Child) / citizensCount * 100;
+        _adultRatio = freeCitizens.Count(x => x.AgeCategory == AgeCategory.Adult) / citizensCount * 100;
+        _elderRatio = freeCitizens.Count(x => x.AgeCategory == AgeCategory.Elder) / citizensCount * 100;
+        _slaveRatio = (citizensCount - freeCitizens.Count()) / citizensCount * 100;
+        _maleRatio = _citizens.Count(x => x.Gender == Gender.Male) / citizensCount * 100;
     }
 
     private void AddNewCitizen()
@@ -335,7 +335,7 @@ else
 
     private async Task DeleteCitizen(Citizen citizen)
     {
-        if (await JSRuntime.InvokeAsync<bool>("confirm", $"Удалить горожанина {citizen.Name}?"))
+        if (await JsRuntime.InvokeAsync<bool>("confirm", $"Удалить горожанина {citizen.Name}?"))
         {
             await CitizenService.DeleteCitizenAsync(citizen.Id);
             _citizens = await CitizenService.GetCitizensAsync();
@@ -379,7 +379,7 @@ else
     private string GenerateHumanName(Gender gender)
     {
         // Европейские средневековые имена для людей (кириллицей)
-        List<string> _humanMaleNames = new()
+        List<string> humanMaleNames = new()
         {
             "Артур", "Ричард", "Генрих", "Эдвард", "Вильгельм", "Роланд", "Ланселот", "Гарет",
             "Персиваль", "Боромир", "Арагорн", "Теоден", "Эомер", "Фарамир", "Боромир",
@@ -390,7 +390,7 @@ else
             "Джеффри", "Хьюго", "Симон", "Питер", "Майкл", "Стивен", "Томас", "Джон"
         };
 
-        List<string> _humanFemaleNames = new()
+        List<string> humanFemaleNames = new()
         {
             "Гвиневра", "Моргана", "Эльза", "Бриенна", "Катерина", "Игрейн", "Элейна",
             "Ровена", "Сигрид", "Фрейя", "Астрид", "Ингеборга", "Хельга", "Брунгильда",
@@ -403,7 +403,7 @@ else
         };
 
         // Европейские средневековые фамилии/прозвища (кириллицей)
-        List<string> _humanMaleNicknames = new()
+        List<string> humanMaleNicknames = new()
         {
             "Львиное Сердце", "Молот", "Железная Рука", "Стальной Кулак", "Медведь", "Медвежья Лапа", "Волк",
             "Орел", "Сокол", "Ворон", "Змей", "Дракон", "Единорог", "Грифон", "Феникс", "Храбрый", "Мудрый",
@@ -415,7 +415,7 @@ else
             "Красный", "Синий", "Зеленый", "Желтый", "Багровый", "Завоеватель", "Бородатый", "Алый"
         };
 
-        List<string> _humanFemaleNicknames = new()
+        List<string> humanFemaleNicknames = new()
         {
             "Львиное Сердце", "Молот", "Железная Рука", "Стальной Кулак", "Медведь", "Медвежья Лапа", "Волк",
             "Орел", "Сокол", "Ворон", "Змей", "Дракон", "Единорог", "Грифон", "Феникс", "Храбрая", "Мудрая",
@@ -429,17 +429,17 @@ else
 
         if (gender == Gender.Male)
         {
-            return String.Format("{0} {1}", _humanMaleNames[_random.Next(_humanFemaleNames.Count)], _humanMaleNicknames[_random.Next(_humanMaleNicknames.Count)]);
+            return String.Format("{0} {1}", humanMaleNames[_random.Next(humanFemaleNames.Count)], humanMaleNicknames[_random.Next(humanMaleNicknames.Count)]);
         }
         else
         {
-            return String.Format("{0} {1}", _humanFemaleNames[_random.Next(_humanFemaleNames.Count)], _humanFemaleNicknames[_random.Next(_humanFemaleNicknames.Count)]);
+            return String.Format("{0} {1}", humanFemaleNames[_random.Next(humanFemaleNames.Count)], humanFemaleNicknames[_random.Next(humanFemaleNicknames.Count)]);
         }
     }
 
     private string GenerateGoblinName(Gender gender)
     {
-        List<string> _goblinMaleNames = new()
+        List<string> goblinMaleNames = new()
         {
             "Гнэш", "Зуб", "Коготь", "Шнырь", "Грыз", "Скрип", "Хрясь", "Тявк", "Шмыг",
             "Гризз", "Клек", "Шурш", "Хват", "Цап", "Грак", "Шип", "Крут", "Лизун",
@@ -447,7 +447,7 @@ else
             "Ух", "Ах", "Ох"
         };
 
-        List<string> _goblinFemaleNames = new()
+        List<string> goblinFemaleNames = new()
         {
             "Зубастик", "Когтиха", "Шныриха", "Грызка", "Скрипуха", "Хряська", "Тявка",
             "Шмыга", "Гризза", "Клека", "Шуршиха", "Хватиха", "Цапа", "Грака", "Шипиха",
@@ -455,7 +455,7 @@ else
             "Чмока", "Фырка", "Хрюка", "Уха", "Аха", "Оха", "Иха"
         };
 
-        List<string> _goblinClanNames = new()
+        List<string> goblinClanNames = new()
         {
             "из Зуборезов", "из Когтегрызов", "из Гнилобрюхов", "из Смердевов", "из Тухлозадов", "из Глиноедов",
             "из Червяков", "из Паучьих", "из Грибных", "из Плесеней", "из Болотных", "из Грязных", "из Вшивых",
@@ -463,14 +463,14 @@ else
             "из Косоглазов", "из Толстобрюхов", "из Вонючек", "из Сопливых", "из Гнойных", "из Чешуйчатых"
         };
 
-        List<string> _goblinMaleTitles = new()
+        List<string> goblinMaleTitles = new()
         {
             "Вонючий", "Прыткий", "Хитрый", "Злой", "Жадный", "Грязный", "Быстрый",
             "Тупой", "Острый", "Мокрый", "Сухой", "Голодный", "Сытый", "Ленивый",
             "Рабочий", "Воинственный", "Трусливый", "Храбрый", "Малый", "Большой"
         };
 
-        List<string> _goblinFemaleTitles = new()
+        List<string> goblinFemaleTitles = new()
         {
             "Вонючка", "Прыгунья", "Плутовка", "Злюка", "Жадюга", "Грязнуля", "Стремительная",
             "Тупица", "Острячка", "Мокрушка", "Сухарка", "Прожора", "Объевшаяся", "Лентяйка",
@@ -480,11 +480,11 @@ else
 
         if (gender == Gender.Male)
         {
-            return String.Format("{0} {1} {2}", _goblinMaleTitles[_random.Next(_goblinMaleTitles.Count)], _goblinMaleNames[_random.Next(_goblinMaleNames.Count)], _goblinClanNames[_random.Next(_goblinClanNames.Count)]);
+            return String.Format("{0} {1} {2}", goblinMaleTitles[_random.Next(goblinMaleTitles.Count)], goblinMaleNames[_random.Next(goblinMaleNames.Count)], goblinClanNames[_random.Next(goblinClanNames.Count)]);
         }
         else
         {
-            return String.Format("{0} {1} {2}", _goblinFemaleTitles[_random.Next(_goblinFemaleTitles.Count)], _goblinFemaleNames[_random.Next(_goblinFemaleNames.Count)], _goblinClanNames[_random.Next(_goblinClanNames.Count)]);
+            return String.Format("{0} {1} {2}", goblinFemaleTitles[_random.Next(goblinFemaleTitles.Count)], goblinFemaleNames[_random.Next(goblinFemaleNames.Count)], goblinClanNames[_random.Next(goblinClanNames.Count)]);
         }
     }
 
@@ -548,5 +548,5 @@ else
         };
     }
 
-    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+    [Inject] private IJSRuntime JsRuntime { get; set; } = default!;
 }

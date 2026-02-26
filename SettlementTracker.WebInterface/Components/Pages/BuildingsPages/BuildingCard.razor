@@ -7,33 +7,33 @@
 
 @rendermode InteractiveServer
 
-@if (_building != null)
+@if (Building != null)
 {
     <Card Class="col-md-3 col-sm-6 col-sx-12 mb-4">
-        <img class="rounded-top" src="/images/@_building.Definition.PictureName" alt="placeholder"/>
+        <img class="rounded-top" src="/images/@Building.Definition.PictureName" alt="placeholder"/>
         <CardBody>
-            <CardTitle>@_building.Definition.Name</CardTitle>
+            <CardTitle>@Building.Definition.Name</CardTitle>
             <CardSubTitle Class="mb-2 text-muted">Стоимость постройки 20 древесины</CardSubTitle>
             <CardText>
-                @_building.Definition.Description
+                @Building.Definition.Description
             </CardText>
-            <Button Color="ButtonColor.Danger" @onclick="@(() => DemolishButtonHandler.Invoke(_building.Id))">Снести</Button>
+            <Button Color="ButtonColor.Danger" @onclick="@(() => DemolishButtonHandler.Invoke(Building.Id))">Снести</Button>
         </CardBody>
     </Card>
 }
 else
 {
-    @if (_buildingDefinition != null)
+    @if (BuildingDefinition != null)
     {
         <Card Class="col-md-3 col-sm-6 col-sx-12 mb-4">
-            <img class="rounded-top" src="/images/@_buildingDefinition.PictureName" alt="placeholder"/>
+            <img class="rounded-top" src="/images/@BuildingDefinition.PictureName" alt="placeholder"/>
             <CardBody>
-                <CardTitle>@_buildingDefinition.Name</CardTitle>
+                <CardTitle>@BuildingDefinition.Name</CardTitle>
                 <CardSubTitle Class="mb-2 text-muted">Стоимость постройки 20 древесины</CardSubTitle>
                 <CardText>
-                    @_buildingDefinition.Description
+                    @BuildingDefinition.Description
                 </CardText>
-                <Button Color="ButtonColor.Primary" @onclick="@(() => BuildButtonHandler.Invoke(_buildingDefinition.Id))">Построить</Button>
+                <Button Color="ButtonColor.Primary" @onclick="@(() => BuildButtonHandler.Invoke(BuildingDefinition.Id))">Построить</Button>
             </CardBody>
         </Card>
     }
@@ -57,8 +57,8 @@ else
 
 @code
 {
-    [Parameter] public Building? _building { get; set; }
-    [Parameter] public BuildingDefinition? _buildingDefinition { get; set; }
+    [Parameter] public Building? Building { get; set; }
+    [Parameter] public BuildingDefinition? BuildingDefinition { get; set; }
 
     [Parameter] public Func<string, Task> BuildButtonHandler { get; set; }
     [Parameter] public Func<Guid, Task> DemolishButtonHandler { get; set; }
@@ -66,11 +66,11 @@ else
 
     private Task Build()
     {
-        return BuildingService.BuildAsync(_buildingDefinition.Id, (0, 0));
+        return BuildingService.BuildAsync(BuildingDefinition.Id, (0, 0));
     }
 
     private Task Demolish()
     {
-        return BuildingService.DemolishAsync(_building.Id);
+        return BuildingService.DemolishAsync(Building.Id);
     }
 }

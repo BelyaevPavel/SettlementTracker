@@ -1,26 +1,26 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using SettlementTracker.Core.Models.Definitions;
 
 namespace SettlementTracker.Core.Models.Entities
 {
     public class ActiveJob
     {
-        public Guid Id { get; private set; }
-        public string DefinitionId { get; private set; }
-        public string Name { get; set; } = string.Empty;
-
-        // Назначенные работники
-        public List<Guid> AssignedCitizenIds { get; private set; } = new();
-
-        [System.Text.Json.Serialization.JsonIgnore]
-        public JobDefinition? Definition { get; set; }
-
         public ActiveJob(Guid id, string definitionId)
         {
             Id = id;
             DefinitionId = definitionId;
         }
+
+        public Guid Id { get; private set; }
+        public string DefinitionId { get; private set; }
+        public string Name { get; set; } = string.Empty;
+
+        // Назначенные работники
+        public List<Guid> AssignedCitizenIds { get; } = new();
+
+        [JsonIgnore] public JobDefinition? Definition { get; set; }
 
         public void AssignCitizen(Guid citizenId)
         {

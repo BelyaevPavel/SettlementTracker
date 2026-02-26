@@ -9,7 +9,7 @@ namespace SettlementTracker.WebInterface.Data.Services
     public interface ISettlementResourcesService
     {
         /// <summary>
-        /// Loads JSON from standard file path.
+        ///     Loads JSON from standard file path.
         /// </summary>
         /// <returns></returns>
         Task LoadDefinitionsAsync();
@@ -19,9 +19,9 @@ namespace SettlementTracker.WebInterface.Data.Services
 
 
         Task AddResourceAsync(string resourceId, float amount);
-    
+
         Task<bool> TrySpendResourceAsync(string resourceId, float amount);
-    
+
         bool CanSpend(string resourceId, float amount);
         event EventHandler<ResourcesChangedEventArgs> ResourcesChanged;
         Task ApplyDailyEffectsAsync(IEnumerable<ResourceEffect> dailyEffects);

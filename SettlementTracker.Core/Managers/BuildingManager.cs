@@ -9,8 +9,8 @@ namespace SettlementTracker.Core.Managers
 {
     public class BuildingManager
     {
-        private readonly SettlementState _settlement;
         private readonly ResourceManager _resourceManager;
+        private readonly SettlementState _settlement;
         private Dictionary<string, BuildingDefinition> _buildingDefinitions = new();
 
         public BuildingManager(SettlementState settlement, ResourceManager resourceManager)
@@ -24,14 +24,14 @@ namespace SettlementTracker.Core.Managers
             _buildingDefinitions = buildingDefinitions;
 
             // Связываем определения с существующими зданиями
-            foreach (var building in _settlement.Buildings)
-                if (_buildingDefinitions.TryGetValue(building.DefinitionId, out var definition))
+            foreach (Building building in _settlement.Buildings)
+                if (_buildingDefinitions.TryGetValue(building.DefinitionId, out BuildingDefinition definition))
                     building.Definition = definition;
         }
 
         public bool CanBuildBuilding(string definitionId, (int X, int Y) position)
         {
-            if (!_buildingDefinitions.TryGetValue(definitionId, out var definition))
+            if (!_buildingDefinitions.TryGetValue(definitionId, out BuildingDefinition definition))
                 return false;
 
             // Проверяем достаточно ли ресурсов
@@ -51,7 +51,7 @@ namespace SettlementTracker.Core.Managers
             if (!CanBuildBuilding(definitionId, position))
                 return null;
 
-            if (!_buildingDefinitions.TryGetValue(definitionId, out var definition))
+            if (!_buildingDefinitions.TryGetValue(definitionId, out BuildingDefinition definition))
                 return null;
 
             // Потребляем ресурсы
@@ -71,11 +71,11 @@ namespace SettlementTracker.Core.Managers
 
         public void DemolishBuilding(Guid buildingId)
         {
-            var building = _settlement.Buildings.FirstOrDefault(b => b.Id == buildingId);
+            Building building = _settlement.Buildings.FirstOrDefault(b => b.Id == buildingId);
             if (building == null) return;
 
             // Освобождаем работников
-            foreach (var citizenId in building.AssignedCitizenIds.ToList())
+            foreach (Guid citizenId in building.AssignedCitizenIds.ToList())
             {
                 var populationManager = new PopulationManager(_settlement);
                 populationManager.UnassignCitizen(citizenId);
@@ -103,7 +103,7 @@ namespace SettlementTracker.Core.Managers
 
         public void ToggleBuildingActivity(Guid buildingId, bool isActive)
         {
-            var building = _settlement.Buildings.FirstOrDefault(b => b.Id == buildingId);
+            Building building = _settlement.Buildings.FirstOrDefault(b => b.Id == buildingId);
             if (building != null) building.IsActive = isActive;
         }
 
@@ -111,14 +111,14 @@ namespace SettlementTracker.Core.Managers
         {
             if (building.Definition == null) return false;
 
-            var assignedCitizens = building.AssignedCitizenIds
+            List<Citizen> assignedCitizens = building.AssignedCitizenIds
                 .Select(id => _settlement.Citizens.FirstOrDefault(c => c.Id == id))
                 .Where(c => c != null)
                 .ToList();
 
-            foreach (var requirement in building.Definition.WorkerRequirements)
+            foreach (WorkerRequirement requirement in building.Definition.WorkerRequirements)
             {
-                var matchingWorkers = assignedCitizens.Count(c =>
+                int matchingWorkers = assignedCitizens.Count(c =>
                     c!.AgeCategory == requirement.AgeCategory &&
                     (c.Gender == requirement.Gender || requirement.Gender == Gender.Any) &&
                     (requirement.CanBeSlave || !c.IsSlave));
@@ -132,7 +132,7 @@ namespace SettlementTracker.Core.Managers
 
         private bool IsPositionOccupied((int X, int Y) position, (int Width, int Height) size)
         {
-            foreach (var building in _settlement.Buildings)
+            foreach (Building building in _settlement.Buildings)
                 // Простая проверка коллизий (можно улучшить)
                 if (Math.Abs(building.Position.X - position.X) < size.Width &&
                     Math.Abs(building.Position.Y - position.Y) < size.Height)

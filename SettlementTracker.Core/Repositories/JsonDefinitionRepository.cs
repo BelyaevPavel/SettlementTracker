@@ -3,6 +3,7 @@ using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
 using SettlementTracker.Core.Models.Definitions;
+using SettlementTracker.Core.Models.Enums;
 
 namespace SettlementTracker.Core.Repositories
 {
@@ -21,17 +22,17 @@ namespace SettlementTracker.Core.Repositories
 
         public Dictionary<string, ResourceDefinition> LoadResourceDefinitions()
         {
-            var filePath = Path.Combine(_basePath, "resources.json");
+            string filePath = Path.Combine(_basePath, "resources.json");
             if (!File.Exists(filePath))
                 // Создаем базовые ресурсы по умолчанию
                 return CreateDefaultResourceDefinitions();
 
-            var json = File.ReadAllText(filePath);
+            string json = File.ReadAllText(filePath);
             var definitions = JsonSerializer.Deserialize<List<ResourceDefinition>>(json);
 
             var result = new Dictionary<string, ResourceDefinition>();
             if (definitions != null)
-                foreach (var def in definitions)
+                foreach (ResourceDefinition def in definitions)
                     result[def.Id] = def;
 
             return result;
@@ -39,17 +40,17 @@ namespace SettlementTracker.Core.Repositories
 
         public async Task<Dictionary<string, ResourceDefinition>> LoadResourceDefinitionsAsync()
         {
-            var filePath = Path.Combine(_basePath, "resources.json");
+            string filePath = Path.Combine(_basePath, "resources.json");
             if (!File.Exists(filePath))
                 // Создаем базовые ресурсы по умолчанию
                 return CreateDefaultResourceDefinitions();
 
-            var json = await File.ReadAllTextAsync(filePath);
+            string json = await File.ReadAllTextAsync(filePath);
             var definitions = JsonSerializer.Deserialize<List<ResourceDefinition>>(json);
 
             var result = new Dictionary<string, ResourceDefinition>();
             if (definitions != null)
-                foreach (var def in definitions)
+                foreach (ResourceDefinition def in definitions)
                     result[def.Id] = def;
 
             return result;
@@ -57,19 +58,21 @@ namespace SettlementTracker.Core.Repositories
 
         public void SaveResourceDefinitions(Dictionary<string, ResourceDefinition> definitions)
         {
-            var filePath = Path.Combine(_basePath, "resources.json");
-            var json = JsonSerializer.Serialize(definitions.Values, new JsonSerializerOptions { WriteIndented = true });
+            string filePath = Path.Combine(_basePath, "resources.json");
+            string json =
+                JsonSerializer.Serialize(definitions.Values, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(filePath, json);
         }
 
         public async Task SaveResourceDefinitionsAsync(Dictionary<string, ResourceDefinition> definitions)
         {
-            var filePath = Path.Combine(_basePath, "resources.json");
-            var json = JsonSerializer.Serialize(definitions.Values, new JsonSerializerOptions { WriteIndented = true });
+            string filePath = Path.Combine(_basePath, "resources.json");
+            string json =
+                JsonSerializer.Serialize(definitions.Values, new JsonSerializerOptions { WriteIndented = true });
             await File.WriteAllTextAsync(filePath, json);
         }
-        
-        
+
+
         private Dictionary<string, ResourceDefinition> CreateDefaultResourceDefinitions()
         {
             var resources = new Dictionary<string, ResourceDefinition>
@@ -115,20 +118,20 @@ namespace SettlementTracker.Core.Repositories
         #endregion
 
         #region Buildings
-        
+
         public Dictionary<string, BuildingDefinition> LoadBuildingDefinitions()
         {
-            var filePath = Path.Combine(_basePath, "buildings.json");
+            string filePath = Path.Combine(_basePath, "buildings.json");
             if (!File.Exists(filePath))
                 // Создаем базовые здания по умолчанию
                 return CreateDefaultBuildingDefinitions();
 
-            var json = File.ReadAllText(filePath);
+            string json = File.ReadAllText(filePath);
             var definitions = JsonSerializer.Deserialize<List<BuildingDefinition>>(json);
 
             var result = new Dictionary<string, BuildingDefinition>();
             if (definitions != null)
-                foreach (var def in definitions)
+                foreach (BuildingDefinition def in definitions)
                     result[def.Id] = def;
 
             return result;
@@ -136,36 +139,38 @@ namespace SettlementTracker.Core.Repositories
 
         public async Task<Dictionary<string, BuildingDefinition>> LoadBuildingDefinitionsAsync()
         {
-            var filePath = Path.Combine(_basePath, "buildings.json");
+            string filePath = Path.Combine(_basePath, "buildings.json");
             if (!File.Exists(filePath))
                 // Создаем базовые здания по умолчанию
                 return CreateDefaultBuildingDefinitions();
 
-            var json = await File.ReadAllTextAsync(filePath);
+            string json = await File.ReadAllTextAsync(filePath);
             var definitions = JsonSerializer.Deserialize<List<BuildingDefinition>>(json);
 
             var result = new Dictionary<string, BuildingDefinition>();
             if (definitions != null)
-                foreach (var def in definitions)
+                foreach (BuildingDefinition def in definitions)
                     result[def.Id] = def;
 
             return result;
         }
-        
+
         public void SaveBuildingDefinitions(Dictionary<string, BuildingDefinition> definitions)
         {
-            var filePath = Path.Combine(_basePath, "buildings.json");
-            var json = JsonSerializer.Serialize(definitions.Values, new JsonSerializerOptions { WriteIndented = true });
+            string filePath = Path.Combine(_basePath, "buildings.json");
+            string json =
+                JsonSerializer.Serialize(definitions.Values, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(filePath, json);
         }
 
         public async Task SaveBuildingDefinitionsAsync(Dictionary<string, BuildingDefinition> definitions)
         {
-            var filePath = Path.Combine(_basePath, "buildings.json");
-            var json = JsonSerializer.Serialize(definitions.Values, new JsonSerializerOptions { WriteIndented = true });
+            string filePath = Path.Combine(_basePath, "buildings.json");
+            string json =
+                JsonSerializer.Serialize(definitions.Values, new JsonSerializerOptions { WriteIndented = true });
             await File.WriteAllTextAsync(filePath, json);
         }
-        
+
         private Dictionary<string, BuildingDefinition> CreateDefaultBuildingDefinitions()
         {
             var buildings = new Dictionary<string, BuildingDefinition>
@@ -203,8 +208,8 @@ namespace SettlementTracker.Core.Repositories
                     {
                         new()
                         {
-                            AgeCategory = Models.Enums.AgeCategory.Adult,
-                            Gender = Models.Enums.Gender.Male,
+                            AgeCategory = AgeCategory.Adult,
+                            Gender = Gender.Male,
                             Count = 2,
                             CanBeSlave = true,
                             RequiresSupervision = false
@@ -230,16 +235,16 @@ namespace SettlementTracker.Core.Repositories
                     {
                         new()
                         {
-                            AgeCategory = Models.Enums.AgeCategory.Adult,
-                            Gender = Models.Enums.Gender.Male,
+                            AgeCategory = AgeCategory.Adult,
+                            Gender = Gender.Male,
                             Count = 1,
                             CanBeSlave = true,
                             RequiresSupervision = true
                         },
                         new()
                         {
-                            AgeCategory = Models.Enums.AgeCategory.Adult,
-                            Gender = Models.Enums.Gender.Female,
+                            AgeCategory = AgeCategory.Adult,
+                            Gender = Gender.Female,
                             Count = 1,
                             CanBeSlave = true,
                             RequiresSupervision = false
@@ -252,24 +257,24 @@ namespace SettlementTracker.Core.Repositories
             SaveBuildingDefinitions(buildings);
             return buildings;
         }
-        
+
         #endregion
 
         #region Jobs
 
         public Dictionary<string, JobDefinition> LoadJobDefinitions()
         {
-            var filePath = Path.Combine(_basePath, "jobs.json");
+            string filePath = Path.Combine(_basePath, "jobs.json");
             if (!File.Exists(filePath))
                 // Создаем базовые задания по умолчанию
                 return CreateDefaultJobDefinitions();
 
-            var json = File.ReadAllText(filePath);
+            string json = File.ReadAllText(filePath);
             var definitions = JsonSerializer.Deserialize<List<JobDefinition>>(json);
 
             var result = new Dictionary<string, JobDefinition>();
             if (definitions != null)
-                foreach (var def in definitions)
+                foreach (JobDefinition def in definitions)
                     result[def.Id] = def;
 
             return result;
@@ -277,36 +282,38 @@ namespace SettlementTracker.Core.Repositories
 
         public async Task<Dictionary<string, JobDefinition>> LoadJobDefinitionsAsync()
         {
-            var filePath = Path.Combine(_basePath, "jobs.json");
+            string filePath = Path.Combine(_basePath, "jobs.json");
             if (!File.Exists(filePath))
                 // Создаем базовые задания по умолчанию
                 return CreateDefaultJobDefinitions();
 
-            var json = await File.ReadAllTextAsync(filePath);
+            string json = await File.ReadAllTextAsync(filePath);
             var definitions = JsonSerializer.Deserialize<List<JobDefinition>>(json);
 
             var result = new Dictionary<string, JobDefinition>();
             if (definitions != null)
-                foreach (var def in definitions)
+                foreach (JobDefinition def in definitions)
                     result[def.Id] = def;
 
             return result;
         }
-        
+
         public void SaveJobDefinitions(Dictionary<string, JobDefinition> definitions)
         {
-            var filePath = Path.Combine(_basePath, "jobs.json");
-            var json = JsonSerializer.Serialize(definitions.Values, new JsonSerializerOptions { WriteIndented = true });
+            string filePath = Path.Combine(_basePath, "jobs.json");
+            string json =
+                JsonSerializer.Serialize(definitions.Values, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(filePath, json);
         }
 
         public async Task SaveJobDefinitionsAsync(Dictionary<string, JobDefinition> definitions)
         {
-            var filePath = Path.Combine(_basePath, "jobs.json");
-            var json = JsonSerializer.Serialize(definitions.Values, new JsonSerializerOptions { WriteIndented = true });
+            string filePath = Path.Combine(_basePath, "jobs.json");
+            string json =
+                JsonSerializer.Serialize(definitions.Values, new JsonSerializerOptions { WriteIndented = true });
             await File.WriteAllTextAsync(filePath, json);
         }
-        
+
         private Dictionary<string, JobDefinition> CreateDefaultJobDefinitions()
         {
             var jobs = new Dictionary<string, JobDefinition>
@@ -324,8 +331,8 @@ namespace SettlementTracker.Core.Repositories
                     {
                         new()
                         {
-                            AgeCategory = Models.Enums.AgeCategory.Adult,
-                            Gender = Models.Enums.Gender.Male,
+                            AgeCategory = AgeCategory.Adult,
+                            Gender = Gender.Male,
                             Count = 1,
                             CanBeSlave = false,
                             RequiresSupervision = false
@@ -353,8 +360,8 @@ namespace SettlementTracker.Core.Repositories
                     {
                         new()
                         {
-                            AgeCategory = Models.Enums.AgeCategory.Adult,
-                            Gender = Models.Enums.Gender.Female,
+                            AgeCategory = AgeCategory.Adult,
+                            Gender = Gender.Female,
                             Count = 1,
                             CanBeSlave = true,
                             RequiresSupervision = true
@@ -381,12 +388,12 @@ namespace SettlementTracker.Core.Repositories
 
         public PopulationDefinition LoadPopulationDefinition()
         {
-            var filePath = Path.Combine(_basePath, "population.json");
+            string filePath = Path.Combine(_basePath, "population.json");
             if (!File.Exists(filePath))
                 // Создаем настройки по умолчанию
                 return CreateDefaultPopulationDefinition();
 
-            var json = File.ReadAllText(filePath);
+            string json = File.ReadAllText(filePath);
             var definition = JsonSerializer.Deserialize<PopulationDefinition>(json);
 
             return definition ?? CreateDefaultPopulationDefinition();
@@ -394,12 +401,12 @@ namespace SettlementTracker.Core.Repositories
 
         public async Task<PopulationDefinition> LoadPopulationDefinitionAsync()
         {
-            var filePath = Path.Combine(_basePath, "population.json");
+            string filePath = Path.Combine(_basePath, "population.json");
             if (!File.Exists(filePath))
                 // Создаем настройки по умолчанию
                 return CreateDefaultPopulationDefinition();
 
-            var json = await File.ReadAllTextAsync(filePath);
+            string json = await File.ReadAllTextAsync(filePath);
             var definition = JsonSerializer.Deserialize<PopulationDefinition>(json);
 
             return definition ?? CreateDefaultPopulationDefinition();
@@ -407,15 +414,15 @@ namespace SettlementTracker.Core.Repositories
 
         public void SavePopulationDefinition(PopulationDefinition definition)
         {
-            var filePath = Path.Combine(_basePath, "population.json");
-            var json = JsonSerializer.Serialize(definition, new JsonSerializerOptions { WriteIndented = true });
+            string filePath = Path.Combine(_basePath, "population.json");
+            string json = JsonSerializer.Serialize(definition, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(filePath, json);
         }
 
         public async Task SavePopulationDefinitionAsync(PopulationDefinition definition)
         {
-            var filePath = Path.Combine(_basePath, "population.json");
-            var json = JsonSerializer.Serialize(definition, new JsonSerializerOptions { WriteIndented = true });
+            string filePath = Path.Combine(_basePath, "population.json");
+            string json = JsonSerializer.Serialize(definition, new JsonSerializerOptions { WriteIndented = true });
             await File.WriteAllTextAsync(filePath, json);
         }
 
@@ -444,8 +451,7 @@ namespace SettlementTracker.Core.Repositories
             SavePopulationDefinition(populationDef);
             return populationDef;
         }
-        
+
         #endregion
-     
     }
 }

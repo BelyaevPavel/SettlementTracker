@@ -10,30 +10,8 @@ namespace SettlementTracker.Core
 {
     public class SettlementGame : IDisposable
     {
-        private SettlementSimulator _simulator;
-        private JsonDefinitionRepository _definitionRepository;
-        private JsonGameStateRepository _gameStateRepository;
-
-        public SettlementSimulator Simulator => _simulator;
-        public SettlementState Settlement => _simulator.GetSettlementState();
-
-        public event EventHandler<DayAdvancedEventArgs> DayAdvanced
-        {
-            add => _simulator.DayAdvanced += value;
-            remove => _simulator.DayAdvanced -= value;
-        }
-
-        public event EventHandler<ResourcesChangedEventArgs> ResourcesChanged
-        {
-            add => _simulator.ResourcesChanged += value;
-            remove => _simulator.ResourcesChanged -= value;
-        }
-
-        public event EventHandler<PopulationChangedEventArgs> PopulationChanged
-        {
-            add => _simulator.PopulationChanged += value;
-            remove => _simulator.PopulationChanged -= value;
-        }
+        private readonly JsonDefinitionRepository _definitionRepository;
+        private readonly JsonGameStateRepository _gameStateRepository;
 
         public SettlementGame(string dataPath, string savePath)
         {
@@ -41,15 +19,42 @@ namespace SettlementTracker.Core
             _gameStateRepository = new JsonGameStateRepository(savePath);
         }
 
+        public SettlementSimulator Simulator { get; private set; }
+
+        public SettlementState Settlement => Simulator.GetSettlementState();
+
+        public void Dispose()
+        {
+            // Очистка ресурсов, если необходимо
+        }
+
+        public event EventHandler<DayAdvancedEventArgs> DayAdvanced
+        {
+            add => Simulator.DayAdvanced += value;
+            remove => Simulator.DayAdvanced -= value;
+        }
+
+        public event EventHandler<ResourcesChangedEventArgs> ResourcesChanged
+        {
+            add => Simulator.ResourcesChanged += value;
+            remove => Simulator.ResourcesChanged -= value;
+        }
+
+        public event EventHandler<PopulationChangedEventArgs> PopulationChanged
+        {
+            add => Simulator.PopulationChanged += value;
+            remove => Simulator.PopulationChanged -= value;
+        }
+
         public void StartNewGame(string settlementName)
         {
-            var settlement = _gameStateRepository.CreateNewGame(settlementName);
+            SettlementState settlement = _gameStateRepository.CreateNewGame(settlementName);
             InitializeSimulator(settlement);
         }
 
         public bool LoadGame(string fileName = "save.json")
         {
-            var settlement = _gameStateRepository.LoadGameState(fileName);
+            SettlementState settlement = _gameStateRepository.LoadGameState(fileName);
             if (settlement == null)
                 return false;
 
@@ -64,7 +69,7 @@ namespace SettlementTracker.Core
 
         public void AdvanceDay()
         {
-            _simulator.AdvanceToNextDay();
+            Simulator.AdvanceToNextDay();
         }
 
         public Dictionary<string, ResourceDefinition> GetResourceDefinitions()
@@ -84,21 +89,16 @@ namespace SettlementTracker.Core
 
         private void InitializeSimulator(SettlementState settlement)
         {
-            _simulator = new SettlementSimulator(settlement);
+            Simulator = new SettlementSimulator(settlement);
 
             // Загружаем определения
-            var resources = _definitionRepository.LoadResourceDefinitions();
-            var buildings = _definitionRepository.LoadBuildingDefinitions();
-            var jobs = _definitionRepository.LoadJobDefinitions();
-            var populationDefinition = _definitionRepository.LoadPopulationDefinition();
+            Dictionary<string, ResourceDefinition> resources = _definitionRepository.LoadResourceDefinitions();
+            Dictionary<string, BuildingDefinition> buildings = _definitionRepository.LoadBuildingDefinitions();
+            Dictionary<string, JobDefinition> jobs = _definitionRepository.LoadJobDefinitions();
+            PopulationDefinition populationDefinition = _definitionRepository.LoadPopulationDefinition();
 
             // Инициализируем симулятор
-            _simulator.Initialize(resources, buildings, jobs, populationDefinition);
-        }
-
-        public void Dispose()
-        {
-            // Очистка ресурсов, если необходимо
+            Simulator.Initialize(resources, buildings, jobs, populationDefinition);
         }
     }
 }

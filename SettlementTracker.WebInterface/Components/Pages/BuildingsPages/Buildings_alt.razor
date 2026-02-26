@@ -72,14 +72,14 @@
     }
 
 
-    private Task Build(string _buildingDefinitionId)
+    private Task Build(string buildingDefinitionId)
     {
-        return BuildingService.BuildAsync(_buildingDefinitionId, (0, 0));
+        return BuildingService.BuildAsync(buildingDefinitionId, (0, 0));
     }
 
-    private Task Demolish(Guid _buildingId)
+    private Task Demolish(Guid buildingId)
     {
-        return BuildingService.DemolishAsync(_buildingId);
+        return BuildingService.DemolishAsync(buildingId);
     }
 
 }

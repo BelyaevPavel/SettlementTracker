@@ -1,6 +1,4 @@
-﻿using System;
-using SettlementTracker.Core;
-using SettlementTracker.Core.Models.Definitions;
+﻿using SettlementTracker.Core;
 
 namespace ConsoleInterface
 {

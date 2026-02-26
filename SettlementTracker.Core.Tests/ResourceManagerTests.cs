@@ -7,18 +7,18 @@ namespace SettlementTracker.Core.Tests;
 [TestFixture]
 public class ResourceManagerTests
 {
-    private SettlementState _settlement;
-    private ResourceManager _resourceManager;
-
     [SetUp]
     public void Setup()
     {
         _settlement = TestDataGenerator.CreateTestSettlement();
         _resourceManager = new ResourceManager(_settlement);
 
-        var resourceDefinitions = TestDataGenerator.CreateResourceDefinitions();
+        Dictionary<string, ResourceDefinition>? resourceDefinitions = TestDataGenerator.CreateResourceDefinitions();
         _resourceManager.InitializeResources(resourceDefinitions);
     }
+
+    private SettlementState _settlement;
+    private ResourceManager _resourceManager;
 
     [Test]
     public void InitializeResources_ShouldCreateMissingResourcesWithZero()
@@ -48,7 +48,7 @@ public class ResourceManagerTests
         };
 
         // Act
-        var result = _resourceManager.HasEnoughResources(requirements);
+        bool result = _resourceManager.HasEnoughResources(requirements);
 
         // Assert
         Assert.That(result, Is.True);
@@ -64,7 +64,7 @@ public class ResourceManagerTests
         };
 
         // Act
-        var result = _resourceManager.HasEnoughResources(requirements);
+        bool result = _resourceManager.HasEnoughResources(requirements);
 
         // Assert
         Assert.That(result, Is.False);
@@ -74,14 +74,14 @@ public class ResourceManagerTests
     public void TryConsumeResources_ShouldConsumeResources_WhenEnoughAvailable()
     {
         // Arrange
-        var initialFood = _settlement.Resources["food"];
+        float initialFood = _settlement.Resources["food"];
         var requirements = new List<ResourceEffect>
         {
             new() { ResourceId = "food", Amount = 30, IsProduction = false }
         };
 
         // Act
-        var result = _resourceManager.TryConsumeResources(requirements);
+        bool result = _resourceManager.TryConsumeResources(requirements);
 
         // Assert
         Assert.That(result, Is.True);
@@ -92,14 +92,14 @@ public class ResourceManagerTests
     public void TryConsumeResources_ShouldNotConsumeResources_WhenNotEnoughAvailable()
     {
         // Arrange
-        var initialFood = _settlement.Resources["food"];
+        float initialFood = _settlement.Resources["food"];
         var requirements = new List<ResourceEffect>
         {
             new() { ResourceId = "food", Amount = 150, IsProduction = false }
         };
 
         // Act
-        var result = _resourceManager.TryConsumeResources(requirements);
+        bool result = _resourceManager.TryConsumeResources(requirements);
 
         // Assert
         Assert.That(result, Is.False);
@@ -110,7 +110,7 @@ public class ResourceManagerTests
     public void AddResources_ShouldIncreaseResourceAmounts()
     {
         // Arrange
-        var initialFood = _settlement.Resources["food"];
+        float initialFood = _settlement.Resources["food"];
         var resourcesToAdd = new List<ResourceEffect>
         {
             new() { ResourceId = "food", Amount = 25, IsProduction = true }
@@ -150,10 +150,11 @@ public class ResourceManagerTests
             ["water"] = -5
         };
 
-        foreach (var change in dailyChanges) _settlement.DailyResourceChanges[change.Key] = change.Value;
+        foreach (KeyValuePair<string, float> change in dailyChanges)
+            _settlement.DailyResourceChanges[change.Key] = change.Value;
 
         // Act
-        var result = _resourceManager.GetDaysUntilResourceDepletion();
+        Dictionary<string, int>? result = _resourceManager.GetDaysUntilResourceDepletion();
 
         // Assert
         Assert.Multiple(() =>
@@ -172,7 +173,7 @@ public class ResourceManagerTests
         _settlement.DailyResourceChanges["food"] = -10;
 
         // Act
-        var forecast = _resourceManager.GetResourceForecast();
+        Dictionary<string, (float Current, float DailyChange)>? forecast = _resourceManager.GetResourceForecast();
 
         // Assert
         Assert.Multiple(() =>
