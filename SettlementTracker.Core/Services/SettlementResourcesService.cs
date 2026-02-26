@@ -16,11 +16,13 @@ namespace SettlementTracker.Core.Services
         private readonly IResourceDefinitionRepository _definitionRepository;
         private Dictionary<string, ResourceDefinition> _definitions;
         private Dictionary<string, float> _resources;
-        private string _stateFilePath = "State\\resources.json";
+        private readonly string _stateFilePath;
 
-        public SettlementResourcesService(IResourceDefinitionRepository definitionRepository)
+        public SettlementResourcesService(IResourceDefinitionRepository definitionRepository,
+            string stateFilePath = "State\\resources.json")
         {
             _definitionRepository = definitionRepository;
+            _stateFilePath = stateFilePath;
             _resources = new Dictionary<string, float>();
             _definitions = new Dictionary<string, ResourceDefinition>();
             LoadDefinitionsAsync();
