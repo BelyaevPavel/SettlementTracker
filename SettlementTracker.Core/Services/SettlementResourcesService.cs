@@ -34,21 +34,6 @@ namespace SettlementTracker.Core.Services
             ResourcesChanged?.Invoke(this, new ResourcesChangedEventArgs(_resources));
         }
 
-
-        public async Task LoadDefinitionsAsync(string json)
-        {
-            var definitions = JsonSerializer.Deserialize<List<ResourceDefinition>>(json);
-
-            var _definitions = new Dictionary<string, ResourceDefinition>();
-            if (definitions != null)
-                foreach (var def in definitions)
-                    _definitions[def.Id] = def;
-
-            foreach (var resourceDef in _definitions.Values)
-                if (!_resources.ContainsKey(resourceDef.Id))
-                    _resources[resourceDef.Id] = 0;
-        }
-
         public async Task LoadDefinitionsAsync()
         {
             _definitions = await _definitionRepository.LoadResourceDefinitionsAsync();
