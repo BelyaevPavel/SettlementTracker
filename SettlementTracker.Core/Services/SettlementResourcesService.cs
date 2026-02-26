@@ -133,5 +133,19 @@ namespace SettlementTracker.Core.Services
         {
             throw new NotImplementedException();
         }
+
+        public async Task SetResourceAsync(string resourceId, float amount)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegative(amount);
+            lock (_lock)
+            {
+                if (!_resources.ContainsKey(resourceId))
+                    throw new ArgumentException(null, nameof(resourceId));
+
+                _resources[resourceId] = amount;
+            }
+
+            await OnResourcesChanged();
+        }
     }
 }
