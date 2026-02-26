@@ -1,10 +1,15 @@
-﻿using SettlementTracker.Core;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 using SettlementTracker.Core.Models.Definitions;
 using SettlementTracker.Core.Models.Entities;
-using SettlementTracker.WebInterface.Data.Services;
 
-
+namespace SettlementTracker.Core.Services
+{
+    
 public class CitizenService : ICitizenService
 {
     private List<Citizen> _citizens = new();
@@ -94,4 +99,5 @@ public class CitizenService : ICitizenService
     {
         CitizensChange?.Invoke(this, EventArgs.Empty);
     }
+}
 }
