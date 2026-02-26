@@ -13,6 +13,7 @@ namespace SettlementTracker.Core.Services
 {
     public class SettlementResourcesService : ISettlementResourcesService
     {
+        private readonly object _lock = new object();
         private readonly IResourceDefinitionRepository _definitionRepository;
         private Dictionary<string, ResourceDefinition> _definitions;
         private Dictionary<string, float> _resources;
@@ -38,15 +39,24 @@ namespace SettlementTracker.Core.Services
         {
             _definitions = await _definitionRepository.LoadResourceDefinitionsAsync();
 
-            foreach (var resourceDef in _definitions.Values)
-                if (!_resources.ContainsKey(resourceDef.Id))
+
+            lock (_lock)
+            {
+                _resources = new Dictionary<string, float>();
+                foreach (var resourceDef in _definitions.Values)
                     _resources[resourceDef.Id] = 0;
+            }
         }
 
         public async Task SaveChangesAsync()
         {
             var options = new JsonSerializerOptions { WriteIndented = true };
-            var json = JsonSerializer.Serialize(_resources, options);
+            string json;
+
+            lock (_lock)
+            {
+                json = JsonSerializer.Serialize(_resources, options);
+            }
 
             Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(_stateFilePath))!);
             await File.WriteAllTextAsync(_stateFilePath, json);
@@ -57,8 +67,12 @@ namespace SettlementTracker.Core.Services
             if (File.Exists(_stateFilePath))
             {
                 var json = await File.ReadAllTextAsync(_stateFilePath);
-                _resources = JsonSerializer.Deserialize<Dictionary<string, float>>(json) ??
-                             new Dictionary<string, float>();
+
+                lock (_lock)
+                {
+                    _resources = JsonSerializer.Deserialize<Dictionary<string, float>>(json) ??
+                                 new Dictionary<string, float>();
+                }
             }
         }
 
@@ -75,15 +89,15 @@ namespace SettlementTracker.Core.Services
         public async Task AddResourceAsync(string resourceId, float amount)
         {
             ArgumentOutOfRangeException.ThrowIfNegative(amount);
-            if (_resources.ContainsKey(resourceId))
+            lock (_lock)
             {
+                if (!_resources.ContainsKey(resourceId))
+                    throw new ArgumentException(null, nameof(resourceId));
+
                 _resources[resourceId] += amount;
-                await OnResourcesChanged();
             }
-            else
-            {
-                throw new ArgumentException(null, nameof(resourceId));
-            }
+
+            await OnResourcesChanged();
         }
 
         public async Task<bool> TrySpendResourceAsync(string resourceId, float amount)
@@ -91,7 +105,10 @@ namespace SettlementTracker.Core.Services
             if (!CanSpend(resourceId, amount))
                 return false;
 
-            _resources[resourceId] -= amount;
+            lock (_lock)
+            {
+                _resources[resourceId] -= amount;
+            }
 
             await OnResourcesChanged();
 
@@ -101,13 +118,12 @@ namespace SettlementTracker.Core.Services
         public bool CanSpend(string resourceId, float amount)
         {
             ArgumentOutOfRangeException.ThrowIfNegative(amount);
-            if (_resources.TryGetValue(resourceId, out var resource))
+            lock (_lock)
             {
+                if (!_resources.TryGetValue(resourceId, out var resource))
+                    throw new ArgumentException(null, nameof(resourceId));
+
                 return resource >= amount;
-            }
-            else
-            {
-                throw new ArgumentException(null, nameof(resourceId));
             }
         }
 
