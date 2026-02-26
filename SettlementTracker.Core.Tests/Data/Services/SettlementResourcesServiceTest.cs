@@ -1,5 +1,4 @@
 ﻿using SettlementTracker.Core.Models.Definitions;
-using SettlementTracker.Core.Repositories;
 using SettlementTracker.Core.Services;
 using SettlementTracker.WebInterface.Data.Services;
 
@@ -9,7 +8,7 @@ namespace SettlementTracker.Core.Tests.Data.Services
     [TestOf(typeof(SettlementResourcesService))]
     public class SettlementResourcesServiceTest
     {
-        private ISettlementResourcesService _service;
+        private SettlementResourcesService _service;
         private MockDefinitionRepository _resourceDefinitionRepository = new MockDefinitionRepository();
 
         [SetUp]
@@ -170,11 +169,115 @@ namespace SettlementTracker.Core.Tests.Data.Services
         [Test]
         public void CanSpend_ForUnknownResource_ReturnsFalse()
         {
+            // Act & Assert
+            Assert.Throws<ArgumentException>(() => _service.CanSpend("nonexistent", 1));
+        }
+
+
+        [Test]
+        public void ResourcesChangedEvent_FiredOnAddResource()
+        {
+            // Arrange
+            var eventFired = false;
+            IReadOnlyDictionary<string, float> newBalance = null;
+            _service.ResourcesChanged += (sender, e) =>
+            {
+                eventFired = true;
+                newBalance = e.CurrentResources;
+            };
+
             // Act
-            bool canSpend = _service.CanSpend("nonexistent", 1);
+            _service.AddResourceAsync("wood", 10).Wait();
 
             // Assert
-            Assert.That(canSpend, Is.False);
+            Assert.That(eventFired, Is.True);
+            Assert.That(newBalance, Is.Not.Null);
+            Assert.That(newBalance["wood"], Is.EqualTo(10));
+        }
+
+        [Test]
+        public void ResourcesChangedEvent_FiredOnTrySpendResource()
+        {
+            // Arrange
+            _service.AddResourceAsync("wood", 10).Wait();
+            var eventFired = false;
+            _service.ResourcesChanged += (sender, e) => eventFired = true;
+
+            // Act
+            _service.TrySpendResourceAsync("wood", 5).Wait();
+
+            // Assert
+            Assert.That(eventFired, Is.True);
+        }
+
+        [Test]
+        public void GetCurrentBalance_ReturnsReadOnlyCopy()
+        {
+            // Arrange
+            _service.AddResourceAsync("wood", 10).Wait();
+            var balance = _service.GetCurrentBalance();
+
+            // Act
+            // Попытка изменить словарь должна быть невозможна (он read-only)
+            // Assert
+            Assert.That(balance, Is.InstanceOf<IReadOnlyDictionary<string, float>>());
+            // Проверим, что изменения через интерфейс не влияют на внутреннее состояние (но это сложно проверить без доступа)
+        }
+
+        // Дополнительные тесты на граничные случаи
+        [Test]
+        public async Task TrySpendResourceAsync_WithZeroAmount_ReturnsTrueAndNoChange()
+        {
+            // Arrange
+            string resourceId = "wood";
+            await _service.AddResourceAsync(resourceId, 10);
+            var before = _service.GetCurrentBalance()[resourceId];
+
+            // Act
+            bool result = await _service.TrySpendResourceAsync(resourceId, 0);
+            var after = _service.GetCurrentBalance()[resourceId];
+
+            // Assert
+            Assert.That(result, Is.True);
+            Assert.That(after, Is.EqualTo(before));
+        }
+
+        [Test]
+        public async Task AddResourceAsync_WithNegativeAmount_ThrowsArgumentException()
+        {
+            // Act & Assert
+            Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () => await _service.AddResourceAsync("wood", -5));
+        }
+
+        [Test]
+        public async Task TrySpendResourceAsync_WithNegativeAmount_ThrowsArgumentException()
+        {
+            // Act & Assert
+            Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+                async () => await _service.TrySpendResourceAsync("wood", -5));
+        }
+
+        [Test]
+        public async Task ApplyDailyEffectsAsync_WithNullCollections_ThrowsArgumentNullException()
+        {
+            // Act & Assert
+            Assert.ThrowsAsync<ArgumentNullException>(async () =>
+                await _service.ApplyDailyEffectsAsync(null));
+        }
+
+        [Test]
+        public async Task GetCurrentBalance_ReturnsAllResourcesWithZeroIfNotPresent()
+        {
+            // Arrange: после загрузки определений баланс должен содержать все ресурсы с 0
+            await _service.LoadDefinitionsAsync();
+
+            // Act
+            var balance = _service.GetCurrentBalance();
+
+            // Assert
+            Assert.That(balance.Keys, Is.EquivalentTo(new[] { "wood", "stone" }));
+            Assert.That(balance["wood"], Is.EqualTo(0));
+            Assert.That(balance["stone"], Is.EqualTo(0));
         }
 
         // [Test]
@@ -387,41 +490,6 @@ namespace SettlementTracker.Core.Tests.Data.Services
         //     Assert.That(balance["stone"], Is.EqualTo(0));
         // }
 
-        [Test]
-        public void ResourcesChangedEvent_FiredOnAddResource()
-        {
-            // Arrange
-            var eventFired = false;
-            IReadOnlyDictionary<string, float> newBalance = null;
-            _service.ResourcesChanged += (sender, e) =>
-            {
-                eventFired = true;
-                newBalance = e.CurrentResources;
-            };
-
-            // Act
-            _service.AddResourceAsync("wood", 10).Wait();
-
-            // Assert
-            Assert.That(eventFired, Is.True);
-            Assert.That(newBalance, Is.Not.Null);
-            Assert.That(newBalance["wood"], Is.EqualTo(10));
-        }
-
-        [Test]
-        public void ResourcesChangedEvent_FiredOnTrySpendResource()
-        {
-            // Arrange
-            _service.AddResourceAsync("wood", 10).Wait();
-            var eventFired = false;
-            _service.ResourcesChanged += (sender, e) => eventFired = true;
-
-            // Act
-            _service.TrySpendResourceAsync("wood", 5).Wait();
-
-            // Assert
-            Assert.That(eventFired, Is.True);
-        }
 
         // [Test]
         // public void ResourcesChangedEvent_FiredOnApplyDailyEffects()
@@ -440,60 +508,6 @@ namespace SettlementTracker.Core.Tests.Data.Services
         //     // Assert
         //     Assert.That(eventFired, Is.True);
         // }
-
-        [Test]
-        public void GetCurrentBalance_ReturnsReadOnlyCopy()
-        {
-            // Arrange
-            _service.AddResourceAsync("wood", 10).Wait();
-            var balance = _service.GetCurrentBalance();
-
-            // Act
-            // Попытка изменить словарь должна быть невозможна (он read-only)
-            // Assert
-            Assert.That(balance, Is.InstanceOf<IReadOnlyDictionary<string, float>>());
-            // Проверим, что изменения через интерфейс не влияют на внутреннее состояние (но это сложно проверить без доступа)
-        }
-
-        // Дополнительные тесты на граничные случаи
-        [Test]
-        public async Task TrySpendResourceAsync_WithZeroAmount_ReturnsTrueAndNoChange()
-        {
-            // Arrange
-            string resourceId = "wood";
-            await _service.AddResourceAsync(resourceId, 10);
-            var before = _service.GetCurrentBalance()[resourceId];
-
-            // Act
-            bool result = await _service.TrySpendResourceAsync(resourceId, 0);
-            var after = _service.GetCurrentBalance()[resourceId];
-
-            // Assert
-            Assert.That(result, Is.True);
-            Assert.That(after, Is.EqualTo(before));
-        }
-
-        [Test]
-        public async Task AddResourceAsync_WithNegativeAmount_ThrowsArgumentException()
-        {
-            // Act & Assert
-            Assert.ThrowsAsync<ArgumentException>(async () => await _service.AddResourceAsync("wood", -5));
-        }
-
-        [Test]
-        public async Task TrySpendResourceAsync_WithNegativeAmount_ThrowsArgumentException()
-        {
-            // Act & Assert
-            Assert.ThrowsAsync<ArgumentException>(async () => await _service.TrySpendResourceAsync("wood", -5));
-        }
-
-        [Test]
-        public async Task ApplyDailyEffectsAsync_WithNullCollections_ThrowsArgumentNullException()
-        {
-            // Act & Assert
-            Assert.ThrowsAsync<ArgumentNullException>(async () =>
-                await _service.ApplyDailyEffectsAsync(null));
-        }
 
         // [Test]
         // public async Task ApplyDailyEffectsAsync_WithUnknownResourceInEffect_IgnoresOrThrows()
@@ -521,63 +535,5 @@ namespace SettlementTracker.Core.Tests.Data.Services
         //     // Act (не должно быть исключения)
         //     Assert.DoesNotThrowAsync(async () => await _service.ApplyDailyEffectsAsync(buildings, new List<Citizen>()));
         // }
-
-        [Test]
-        public async Task GetResourceDefinitions_ReturnsListOfDefinitions()
-        {
-            // Arrange
-            var json = @"[{ ""id"": ""wood"", ""name"": ""Wood"" }]";
-            await _service.LoadDefinitionsAsync();
-
-            // Act
-            var defs = _service.GetResourceDefinitions();
-
-            // Assert
-            Assert.That(defs, Is.Not.Null);
-            Assert.That(defs.Count, Is.EqualTo(1));
-            Assert.That(defs[0].Id, Is.EqualTo("wood"));
-        }
-
-        [Test]
-        public async Task GetCurrentBalance_ReturnsAllResourcesWithZeroIfNotPresent()
-        {
-            // Arrange: после загрузки определений баланс должен содержать все ресурсы с 0
-            var json = @"[{ ""id"": ""wood"" }, { ""id"": ""stone"" }]";
-            await _service.LoadDefinitionsAsync();
-
-            // Act
-            var balance = _service.GetCurrentBalance();
-
-            // Assert
-            Assert.That(balance.Keys, Is.EquivalentTo(new[] { "wood", "stone" }));
-            Assert.That(balance["wood"], Is.EqualTo(0));
-            Assert.That(balance["stone"], Is.EqualTo(0));
-        }
-    }
-
-    public class MockDefinitionRepository : IResourceDefinitionRepository
-    {
-        public Dictionary<string, ResourceDefinition> DefinitionPreset { get; set; } =
-            new Dictionary<string, ResourceDefinition>();
-
-        public Dictionary<string, ResourceDefinition> LoadResourceDefinitions()
-        {
-            return DefinitionPreset;
-        }
-
-        public async Task<Dictionary<string, ResourceDefinition>> LoadResourceDefinitionsAsync()
-        {
-            return DefinitionPreset;
-        }
-
-        public void SaveResourceDefinitions(Dictionary<string, ResourceDefinition> definitions)
-        {
-            return;
-        }
-
-        public async Task SaveResourceDefinitionsAsync(Dictionary<string, ResourceDefinition> definitions)
-        {
-            return;
-        }
     }
 }

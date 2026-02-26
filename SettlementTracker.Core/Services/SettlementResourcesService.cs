@@ -89,6 +89,7 @@ namespace SettlementTracker.Core.Services
 
         public async Task AddResourceAsync(string resourceId, float amount)
         {
+            ArgumentOutOfRangeException.ThrowIfNegative(amount);
             if (_resources.ContainsKey(resourceId))
             {
                 _resources[resourceId] += amount;
@@ -114,6 +115,7 @@ namespace SettlementTracker.Core.Services
 
         public bool CanSpend(string resourceId, float amount)
         {
+            ArgumentOutOfRangeException.ThrowIfNegative(amount);
             if (_resources.TryGetValue(resourceId, out var resource))
             {
                 return resource >= amount;
