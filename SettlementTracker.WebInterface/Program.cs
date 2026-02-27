@@ -11,6 +11,15 @@ public class Program
     {
         WebApplicationBuilder? builder = WebApplication.CreateBuilder(args);
 
+        // Настройка логирования
+        builder.Logging.ClearProviders(); // очищаем стандартные (необязательно)
+        builder.Logging.AddConsole(); // вывод в консоль
+        builder.Logging.AddDebug(); // вывод в окно отладки
+
+// Установка минимального уровня логирования для всего приложения
+// TODO: Change to Error before pull-request
+        builder.Logging.SetMinimumLevel(LogLevel.Trace);
+
         builder.Services.AddBlazorBootstrap();
 
         // Add services to the container.
@@ -20,7 +29,7 @@ public class Program
         builder.Services.AddSingleton<ICitizenService, CitizenService>();
         builder.Services.AddSingleton<IBuildingService, BuildingService>();
         builder.Services.AddSingleton<ISettlementResourcesService>(
-            new SettlementResourcesService(new JsonDefinitionRepository("State")));
+            new SettlementResourcesService(new JsonDefinitionRepository("Data")));
 
 
         WebApplication? app = builder.Build();

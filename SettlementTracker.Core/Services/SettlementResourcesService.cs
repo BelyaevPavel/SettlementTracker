@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using SettlementTracker.Core.Managers;
 using SettlementTracker.Core.Models.Definitions;
@@ -18,20 +19,22 @@ namespace SettlementTracker.Core.Services
         private readonly string _stateFilePath;
         private Dictionary<string, ResourceDefinition> _definitions;
         private Dictionary<string, float> _resources;
+        private readonly string _directoryName;
 
         public SettlementResourcesService(IResourceDefinitionRepository definitionRepository,
             string stateFilePath = "State\\resources.json")
         {
             _definitionRepository = definitionRepository;
             _stateFilePath = stateFilePath;
+            _directoryName = Path.GetDirectoryName(Path.GetFullPath(_stateFilePath));
             _resources = new Dictionary<string, float>();
             _definitions = new Dictionary<string, ResourceDefinition>();
-            LoadDefinitionsAsync();
+            LoadDefinitionsAsync().Wait();
         }
 
-        public async Task LoadDefinitionsAsync()
+        public async Task LoadDefinitionsAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
-            _definitions = await _definitionRepository.LoadResourceDefinitionsAsync();
+            _definitions = await _definitionRepository.LoadResourceDefinitionsAsync(cancellationToken);
 
 
             lock (_lock)
@@ -42,17 +45,24 @@ namespace SettlementTracker.Core.Services
             }
         }
 
-        public IReadOnlyList<ResourceDefinition> GetResourceDefinitions()
+        public IReadOnlyDictionary<string, ResourceDefinition> GetResourceDefinitions()
         {
-            return _definitions.Values.ToList();
+            lock (_lock)
+            {
+                return _definitions.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+            }
         }
 
         public IReadOnlyDictionary<string, float> GetCurrentBalance()
         {
-            return _resources;
+            lock (_lock)
+            {
+                return _resources.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+            }
         }
 
-        public async Task AddResourceAsync(string resourceId, float amount)
+        public async Task AddResourceAsync(string resourceId, float amount,
+            CancellationToken cancellationToken = default(CancellationToken))
         {
             ArgumentOutOfRangeException.ThrowIfNegative(amount);
             lock (_lock)
@@ -63,20 +73,26 @@ namespace SettlementTracker.Core.Services
                 _resources[resourceId] += amount;
             }
 
-            await OnResourcesChanged();
+            await OnResourcesChanged(cancellationToken);
         }
 
-        public async Task<bool> TrySpendResourceAsync(string resourceId, float amount)
+        public async Task<bool> TrySpendResourceAsync(string resourceId, float amount,
+            CancellationToken cancellationToken = default(CancellationToken))
         {
-            if (!CanSpend(resourceId, amount))
-                return false;
-
             lock (_lock)
             {
-                _resources[resourceId] -= amount;
+                if (amount >= 0 && _resources.TryGetValue(resourceId, out float currentAmount) &&
+                    currentAmount >= amount)
+                {
+                    _resources[resourceId] -= amount;
+                }
+                else
+                {
+                    return false;
+                }
             }
 
-            await OnResourcesChanged();
+            await OnResourcesChanged(cancellationToken);
 
             return true;
         }
@@ -95,18 +111,13 @@ namespace SettlementTracker.Core.Services
 
         public event EventHandler<ResourcesChangedEventArgs>? ResourcesChanged;
 
-        public Task ApplyDailyEffectsAsync(IEnumerable<ResourceEffect> dailyEffects)
+        public Task ApplyDailyEffectsAsync(IEnumerable<ResourceEffect> dailyEffects,
+            CancellationToken cancellationToken = default(CancellationToken))
         {
             throw new NotImplementedException();
         }
 
-        private async Task OnResourcesChanged()
-        {
-            await SaveChangesAsync();
-            ResourcesChanged?.Invoke(this, new ResourcesChangedEventArgs(_resources));
-        }
-
-        public async Task SaveChangesAsync()
+        public async Task SaveStateAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
             var options = new JsonSerializerOptions { WriteIndented = true };
             string json;
@@ -116,25 +127,52 @@ namespace SettlementTracker.Core.Services
                 json = JsonSerializer.Serialize(_resources, options);
             }
 
-            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(_stateFilePath))!);
-            await File.WriteAllTextAsync(_stateFilePath, json);
+            Directory.CreateDirectory(_directoryName!);
+
+            await File.WriteAllTextAsync(_stateFilePath, json, cancellationToken);
         }
 
-        public async Task LoadFromFileAsync()
+        public async Task LoadStateAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
             if (File.Exists(_stateFilePath))
             {
-                string json = await File.ReadAllTextAsync(_stateFilePath);
+                string json = await File.ReadAllTextAsync(_stateFilePath, cancellationToken);
 
                 lock (_lock)
                 {
-                    _resources = JsonSerializer.Deserialize<Dictionary<string, float>>(json) ??
-                                 new Dictionary<string, float>();
+                    var deserializeResources = JsonSerializer.Deserialize<Dictionary<string, float>>(json);
+                    if (deserializeResources != null)
+                    {
+                        foreach (KeyValuePair<string, float> deserializeResource in deserializeResources)
+                        {
+                            if (_definitions.ContainsKey(deserializeResource.Key))
+                            {
+                                if (!_resources.TryAdd(deserializeResource.Key, 0))
+                                {
+                                    _resources[deserializeResource.Key] = deserializeResource.Value;
+                                }
+                            }
+                            else
+                            {
+                                throw new ArgumentException("Unknown resource Id is loaded");
+                            }
+                        }
+                    }
+                    else
+                    {
+                        _resources = new Dictionary<string, float>();
+                        foreach (KeyValuePair<string, ResourceDefinition> deserializeResource in _definitions)
+                        {
+                            _resources[deserializeResource.Key] = 0;
+                        }
+                    }
                 }
             }
         }
 
-        public async Task SetResourceAsync(string resourceId, float amount)
+
+        public async Task SetResourceAsync(string resourceId, float amount,
+            CancellationToken cancellationToken = default(CancellationToken))
         {
             ArgumentOutOfRangeException.ThrowIfNegative(amount);
             lock (_lock)
@@ -145,7 +183,16 @@ namespace SettlementTracker.Core.Services
                 _resources[resourceId] = amount;
             }
 
-            await OnResourcesChanged();
+            await OnResourcesChanged(cancellationToken);
+        }
+
+        private async Task OnResourcesChanged(CancellationToken cancellationToken = default(CancellationToken))
+        {
+            await SaveStateAsync(cancellationToken);
+            lock (_lock)
+            {
+                ResourcesChanged?.Invoke(this, new ResourcesChangedEventArgs(_resources.ToDictionary()));
+            }
         }
     }
 }

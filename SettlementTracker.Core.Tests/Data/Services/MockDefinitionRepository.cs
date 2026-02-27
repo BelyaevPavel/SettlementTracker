@@ -12,7 +12,8 @@ public class MockDefinitionRepository : IResourceDefinitionRepository
         return DefinitionPreset;
     }
 
-    public async Task<Dictionary<string, ResourceDefinition>> LoadResourceDefinitionsAsync()
+    public async Task<Dictionary<string, ResourceDefinition>> LoadResourceDefinitionsAsync(
+        CancellationToken cancellationToken = default(CancellationToken))
     {
         return DefinitionPreset;
     }
@@ -21,7 +22,8 @@ public class MockDefinitionRepository : IResourceDefinitionRepository
     {
     }
 
-    public async Task SaveResourceDefinitionsAsync(Dictionary<string, ResourceDefinition> definitions)
+    public async Task SaveResourceDefinitionsAsync(Dictionary<string, ResourceDefinition> definitions,
+        CancellationToken cancellationToken = default(CancellationToken))
     {
     }
 }

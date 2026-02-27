@@ -1,0 +1,30 @@
+[
+  {
+    "id": "food",
+    "name": "\u0415\u0434\u0430",
+    "description": "\u041E\u0441\u043D\u043E\u0432\u043D\u043E\u0439 \u043F\u0438\u0449\u0435\u0432\u043E\u0439 \u0440\u0435\u0441\u0443\u0440\u0441",
+    "iconPath": "/images/Icons/food.png",
+    "isConsumable": true
+  },
+  {
+    "id": "wood",
+    "name": "\u0414\u0440\u0435\u0432\u0435\u0441\u0438\u043D\u0430",
+    "description": "\u0421\u0442\u0440\u043E\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u0439 \u043C\u0430\u0442\u0435\u0440\u0438\u0430\u043B",
+    "iconPath": "/images/Icons/wood.png",
+    "isConsumable": false
+  },
+  {
+    "id": "stone",
+    "name": "\u041A\u0430\u043C\u0435\u043D\u044C",
+    "description": "\u0421\u0442\u0440\u043E\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u0439 \u043C\u0430\u0442\u0435\u0440\u0438\u0430\u043B",
+    "iconPath": "/images/Icons/stone.png",
+    "isConsumable": false
+  },
+  {
+    "id": "water",
+    "name": "\u0412\u043E\u0434\u0430",
+    "description": "\u041F\u0438\u0442\u044C\u0435\u0432\u0430\u044F \u0432\u043E\u0434\u0430",
+    "iconPath": "/images/Icons/water.png",
+    "isConsumable": true
+  }
+]

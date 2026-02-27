@@ -85,14 +85,17 @@ public class SettlementResourcesServiceTest
 
         // Act
         await _service.LoadDefinitionsAsync();
-        IReadOnlyList<ResourceDefinition>? definitions = _service.GetResourceDefinitions();
+        IReadOnlyDictionary<string, ResourceDefinition> definitions = _service.GetResourceDefinitions();
 
         // Assert
-        Assert.That(definitions.Count, Is.EqualTo(2));
-        Assert.That(definitions[0].Id, Is.EqualTo("food"));
-        Assert.That(definitions[1].Id, Is.EqualTo("stone"));
-        Assert.That(definitions[0].IsConsumable, Is.True);
-        Assert.That(definitions[1].IsConsumable, Is.False);
+        Assert.Multiple(() =>
+        {
+            Assert.That(definitions.Count, Is.EqualTo(2));
+            Assert.That(definitions.ContainsKey("food"), Is.True);
+            Assert.That(definitions.ContainsKey("stone"), Is.True);
+            Assert.That(definitions["food"].IsConsumable, Is.True);
+            Assert.That(definitions["stone"].IsConsumable, Is.False);
+        });
     }
 
     [Test]
@@ -264,11 +267,13 @@ public class SettlementResourcesServiceTest
     }
 
     [Test]
-    public async Task TrySpendResourceAsync_WithNegativeAmount_ThrowsArgumentException()
+    public async Task TrySpendResourceAsync_WithNegativeAmount_ReturnsFalse()
     {
+        // Assert
+        bool result = await _service.TrySpendResourceAsync("wood", -5);
+
         // Act & Assert
-        Assert.ThrowsAsync<ArgumentOutOfRangeException>(
-            async () => await _service.TrySpendResourceAsync("wood", -5));
+        Assert.That(result, Is.False);
     }
 
     // This test is skipped until ApplyDailyEffectsAsync is implemented
@@ -301,7 +306,7 @@ public class SettlementResourcesServiceTest
         // Arrange
 
         // Act
-        await _service.SaveChangesAsync();
+        await _service.SaveStateAsync();
 
         // Assert
         Assert.That(File.Exists(_stateFilePath), Is.True, "Файл состояния должен быть создан.");
@@ -332,7 +337,7 @@ public class SettlementResourcesServiceTest
 
 
         // Act
-        await _service.LoadFromFileAsync();
+        await _service.LoadStateAsync();
 
         // Assert
         IReadOnlyDictionary<string, float>? actualResources = _service.GetCurrentBalance();
