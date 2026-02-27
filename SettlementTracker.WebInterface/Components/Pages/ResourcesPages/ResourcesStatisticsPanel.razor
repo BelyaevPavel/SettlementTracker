@@ -1,0 +1,213 @@
+﻿@rendermode InteractiveServer
+@using BlazorBootstrap
+@using SettlementTracker.Core.Managers
+@using SettlementTracker.Core.Models.Definitions
+@using SettlementTracker.WebInterface.Data.Services
+
+@inject ISettlementResourcesService ResourceService
+@inject ILogger<ResourcesStatisticsPanel> Logger
+
+@implements IDisposable
+
+<Offcanvas @ref="_offcanvas"
+           title="Ресурсы">
+    <HeaderTemplate>
+        <div class="d-flex justify-content-between align-items-center w-100">
+            <h5 class="mb-0">📊 Статистика ресурсов</h5>
+            <button type="button" class="btn-close" @onclick="HideAsync"></button>
+        </div>
+    </HeaderTemplate>
+    <BodyTemplate>
+        <div class="container-fluid">
+            <!-- Заголовок колонок (скрыт на мобильных) -->
+            <div class="row fw-bold d-none d-md-flex mb-2">
+                <div class="col-4">Ресурс</div>
+                <div class="col-2 text-end">Кол-во</div>
+                <div class="col-2 text-end">Изм.</div>
+                <div class="col-2 text-end">Дней запаса</div>
+                <div class="col-2 text-end">Действия</div>
+            </div>
+
+            @foreach (var resource in _resources)
+            {
+                <div class="row align-items-center mb-3 border-bottom pb-2">
+                    <!-- Название и иконка -->
+                    <div class="col-12 col-md-4">
+                        <Image Src="@resource.Icon" Alt="placeholder"/>
+                        <span class="fw-bold">@resource.Name</span>
+                    </div>
+
+                    <!-- Текущее количество -->
+                    <div class="col-6 col-md-2 text-start text-md-end">
+                        <span class="fs-5">@resource.CurrentAmount</span>
+                    </div>
+
+                    <!-- Изменение на следующий день -->
+                    <div class="col-6 col-md-2 text-start text-md-end">
+                        @if (resource.DailyChange > 0)
+                        {
+                            <span class="text-success">
+                                <i class="bi bi-arrow-up"></i> +@resource.DailyChange
+                            </span>
+                        }
+                        else if (resource.DailyChange < 0)
+                        {
+                            <span class="text-danger">
+                                <i class="bi bi-arrow-down"></i> @resource.DailyChange
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">
+                                <i class="bi bi-dash"></i> 0
+                            </span>
+                        }
+                    </div>
+
+                    <!-- Дней запаса -->
+                    <div class="col-6 col-md-2 text-start text-md-end">
+                        @if (resource.DailyChange < 0)
+                        {
+                            var days = (int)Math.Floor(resource.CurrentAmount / Math.Abs(resource.DailyChange));
+                            <span class="@(days < 3 ? "text-danger fw-bold" : "")">@days дн.</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">∞</span>
+                        }
+                    </div>
+
+                    <!-- Кнопки ручного изменения -->
+                    <div class="col-6 col-md-2 text-end">
+                        <Button Size="ButtonSize.Small" Color="ButtonColor.Success"
+                                @onclick=" async () => await IncrementAsync(resource.Id)">
+                            <i class="bi bi-plus"></i>
+                        </Button>
+                        <Button Size="ButtonSize.Small" Color="ButtonColor.Danger"
+                                class="ms-1" @onclick="async () => await DecrementAsync(resource.Id)"
+                                disabled="@(resource.CurrentAmount < 1)">
+                            <i class="bi bi-dash">
+                            </i>
+                        </Button>
+                    </div>
+                </div>
+            }
+
+            <!-- Пояснение -->
+            <div class="small text-muted mt-3">
+                <i class="bi bi-info-circle"></i> Дней запаса рассчитано при сохранении текущего изменения.
+            </div>
+        </div>
+    </BodyTemplate>
+</Offcanvas>
+
+@code {
+    private Offcanvas _offcanvas = default!;
+
+    public EventCallback OnShown { get; set; }
+
+    private async Task OnShowOffcanvasClick() => await _offcanvas.ShowAsync();
+
+    private async Task OnHideOffcanvasClick() => await _offcanvas.HideAsync();
+
+    private List<DisplayResource> _resources = new();
+
+    private IReadOnlyDictionary<string, ResourceDefinition> _resourcesDefinitions;
+    private IReadOnlyDictionary<string, float> _resourcesBalance;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ResourceService.ResourcesChanged += OnResourcesChanged;
+
+        await ResourceService.LoadStateAsync();
+
+        OnUpdate();
+    }
+
+    private void OnResourcesChanged(object? sender, ResourcesChangedEventArgs e)
+    {
+        OnUpdate();
+        StateHasChanged();
+    }
+
+    private void OnUpdate()
+    {
+        _resourcesDefinitions = ResourceService.GetResourceDefinitions();
+        _resourcesBalance = ResourceService.GetCurrentBalance();
+
+        CreateResourcesList();
+    }
+
+    private void CreateResourcesList()
+    {
+        _resources.Clear();
+
+        foreach (var resourceData in _resourcesBalance)
+        {
+            if (!_resourcesDefinitions.TryGetValue(resourceData.Key, out var definition))
+            {
+                Logger.LogWarning($"Nonexistent definition {definition} requested");
+                continue;
+            }
+
+            _resources.Add(new DisplayResource()
+            {
+                Id = resourceData.Key,
+                Icon = definition.IconPath,
+                CurrentAmount = resourceData.Value,
+                DailyChange = 0, // Пока не реализована агрегация Resource effect задана 0
+                Name = definition.Name
+            });
+        }
+    }
+
+    public async Task ShowAsync()
+    {
+        await _offcanvas.ShowAsync();
+        await OnShown.InvokeAsync();
+    }
+
+    public async Task HideAsync()
+    {
+        await _offcanvas.HideAsync();
+    }
+
+    private async Task IncrementAsync(string resourceId)
+    {
+        try
+        {
+            await ResourceService.AddResourceAsync(resourceId, 1);
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, $"Failed to increment resource {resourceId}", resourceId);
+        }
+    }
+
+    private async Task DecrementAsync(string resourceId)
+    {
+        try
+        {
+            await ResourceService.TrySpendResourceAsync(resourceId, 1);
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, $"Failed to decrement resource {resourceId}", resourceId);
+        }
+    }
+
+    public void Dispose()
+    {
+        ResourceService.ResourcesChanged -= OnResourcesChanged;
+    }
+
+    private class DisplayResource
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string Icon { get; set; } = string.Empty;
+        public float CurrentAmount { get; set; }
+        public float DailyChange { get; set; }
+    }
+
+}

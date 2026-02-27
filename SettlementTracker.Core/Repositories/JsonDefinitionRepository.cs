@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using SettlementTracker.Core.Models.Definitions;
 using SettlementTracker.Core.Models.Enums;
@@ -11,6 +12,7 @@ namespace SettlementTracker.Core.Repositories
         IPopulationDefinitionRepository, IJobDefinitionRepository
     {
         private readonly string _basePath;
+        private readonly string _resourcesDefinitionFile = "resourcesDefinition.json";
 
         public JsonDefinitionRepository(string basePath)
         {
@@ -22,7 +24,7 @@ namespace SettlementTracker.Core.Repositories
 
         public Dictionary<string, ResourceDefinition> LoadResourceDefinitions()
         {
-            string filePath = Path.Combine(_basePath, "resources.json");
+            string filePath = Path.Combine(_basePath, _resourcesDefinitionFile);
             if (!File.Exists(filePath))
                 // Создаем базовые ресурсы по умолчанию
                 return CreateDefaultResourceDefinitions();
@@ -38,14 +40,15 @@ namespace SettlementTracker.Core.Repositories
             return result;
         }
 
-        public async Task<Dictionary<string, ResourceDefinition>> LoadResourceDefinitionsAsync()
+        public async Task<Dictionary<string, ResourceDefinition>> LoadResourceDefinitionsAsync(
+            CancellationToken cancellationToken = default(CancellationToken))
         {
-            string filePath = Path.Combine(_basePath, "resources.json");
+            string filePath = Path.Combine(_basePath, _resourcesDefinitionFile);
             if (!File.Exists(filePath))
                 // Создаем базовые ресурсы по умолчанию
                 return CreateDefaultResourceDefinitions();
 
-            string json = await File.ReadAllTextAsync(filePath);
+            string json = await File.ReadAllTextAsync(filePath, cancellationToken);
             var definitions = JsonSerializer.Deserialize<List<ResourceDefinition>>(json);
 
             var result = new Dictionary<string, ResourceDefinition>();
@@ -58,18 +61,19 @@ namespace SettlementTracker.Core.Repositories
 
         public void SaveResourceDefinitions(Dictionary<string, ResourceDefinition> definitions)
         {
-            string filePath = Path.Combine(_basePath, "resources.json");
+            string filePath = Path.Combine(_basePath, _resourcesDefinitionFile);
             string json =
                 JsonSerializer.Serialize(definitions.Values, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(filePath, json);
         }
 
-        public async Task SaveResourceDefinitionsAsync(Dictionary<string, ResourceDefinition> definitions)
+        public async Task SaveResourceDefinitionsAsync(Dictionary<string, ResourceDefinition> definitions,
+            CancellationToken cancellationToken = default(CancellationToken))
         {
-            string filePath = Path.Combine(_basePath, "resources.json");
+            string filePath = Path.Combine(_basePath, _resourcesDefinitionFile);
             string json =
                 JsonSerializer.Serialize(definitions.Values, new JsonSerializerOptions { WriteIndented = true });
-            await File.WriteAllTextAsync(filePath, json);
+            await File.WriteAllTextAsync(filePath, json, cancellationToken);
         }
 
 
