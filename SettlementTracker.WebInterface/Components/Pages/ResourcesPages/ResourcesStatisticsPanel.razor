@@ -1,12 +1,12 @@
 ﻿@rendermode InteractiveServer
-@using BlazorBootstrap
-@using SettlementTracker.Core.Managers
-@using SettlementTracker.Core.Models.Definitions
-@using SettlementTracker.WebInterface.Data.Services
 
 @inject ISettlementResourcesService ResourceService
 @inject ILogger<ResourcesStatisticsPanel> Logger
 
+@using BlazorBootstrap
+@using SettlementTracker.Core.Managers
+@using SettlementTracker.Core.Models.Definitions
+@using SettlementTracker.Core.Services
 @implements IDisposable
 
 <Offcanvas @ref="_offcanvas"
@@ -28,7 +28,7 @@
                 <div class="col-2 text-end">Действия</div>
             </div>
 
-            @foreach (var resource in _resources)
+            @foreach (DisplayResource resource in _resources)
             {
                 <div class="row align-items-center mb-3 border-bottom pb-2">
                     <!-- Название и иконка -->
@@ -106,9 +106,15 @@
 
     public EventCallback OnShown { get; set; }
 
-    private async Task OnShowOffcanvasClick() => await _offcanvas.ShowAsync();
+private async Task OnShowOffcanvasClick()
+{
+await _offcanvas.ShowAsync();
+}
 
-    private async Task OnHideOffcanvasClick() => await _offcanvas.HideAsync();
+private async Task OnHideOffcanvasClick()
+{
+await _offcanvas.HideAsync();
+}
 
     private List<DisplayResource> _resources = new();
 
@@ -142,15 +148,15 @@
     {
         _resources.Clear();
 
-        foreach (var resourceData in _resourcesBalance)
+    foreach (KeyValuePair<string, float> resourceData in _resourcesBalance)
         {
-            if (!_resourcesDefinitions.TryGetValue(resourceData.Key, out var definition))
+        if (!_resourcesDefinitions.TryGetValue(resourceData.Key, out ResourceDefinition? definition))
             {
                 Logger.LogWarning($"Nonexistent definition {definition} requested");
                 continue;
             }
 
-            _resources.Add(new DisplayResource()
+        _resources.Add(new DisplayResource
             {
                 Id = resourceData.Key,
                 Icon = definition.IconPath,

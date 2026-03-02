@@ -282,7 +282,108 @@ public class SettlementResourcesServiceTest
     {
         // Act & Assert
         Assert.ThrowsAsync<ArgumentNullException>(async () =>
-            await _service.ApplyDailyEffectsAsync(null));
+            await _service.TryApplyResourceEffectAsync(null));
+    }
+
+    [Test]
+    public async Task TryApplyDailyEffectsAsync_ProductionEffect_ExistingResource_ShouldIncreaseResourceAndReturnTrue()
+    {
+        // Arrange
+        const string resourceId = "wood";
+        const float initialAmount = 10f;
+        const float effectAmount = 5f;
+        await _service.SetResourceAsync(resourceId, initialAmount);
+
+        var effect = new ResourceEffect
+        {
+            ResourceId = resourceId,
+            Amount = effectAmount,
+            IsProduction = true
+        };
+
+        // Act
+        bool result = await _service.TryApplyResourceEffectAsync(effect, CancellationToken.None);
+        float resultAmount = _service.GetCurrentBalance()["wood"];
+
+        // Assert
+        Assert.That(result, Is.True, "Method should return true for successful production.");
+        Assert.That(resultAmount, Is.EqualTo(initialAmount + effectAmount),
+            "Resource amount should increase by production amount.");
+    }
+
+    [Test]
+    public async Task TryApplyDailyEffectsAsync_ConsumptionEffect_ExistingResource_ShouldIncreaseResourceAndReturnTrue()
+    {
+        // Arrange
+        const string resourceId = "wood";
+        const float initialAmount = 10f;
+        const float effectAmount = 5f;
+        await _service.SetResourceAsync(resourceId, initialAmount);
+
+        var effect = new ResourceEffect
+        {
+            ResourceId = resourceId,
+            Amount = effectAmount,
+            IsProduction = false //Consumption
+        };
+
+        // Act
+        bool result = await _service.TryApplyResourceEffectAsync(effect, CancellationToken.None);
+        float resultAmount = _service.GetCurrentBalance()["wood"];
+
+        // Assert
+        Assert.That(result, Is.True, "Method should return true for successful production.");
+        Assert.That(resultAmount, Is.EqualTo(initialAmount - effectAmount),
+            "Resource amount should increase by production amount.");
+    }
+
+    [Test]
+    public async Task
+        TryApplyDailyEffectsAsync_ConsumptionEffect_InsufficientResource_ShouldReturnFalseAndNotChangeResource()
+    {
+        // Arrange
+        const string resourceId = "wood";
+        const float initialAmount = 2f;
+        const float effectAmount = 5f;
+        await _service.SetResourceAsync(resourceId, initialAmount);
+
+        var effect = new ResourceEffect
+        {
+            ResourceId = resourceId,
+            Amount = effectAmount,
+            IsProduction = false //Consumption
+        };
+
+        // Act
+        bool result = await _service.TryApplyResourceEffectAsync(effect, CancellationToken.None);
+        float resultAmount = _service.GetCurrentBalance()["wood"];
+
+        // Assert
+        Assert.That(result, Is.False, "Method should return true for successful consumption.");
+        Assert.That(resultAmount, Is.EqualTo(initialAmount),
+            "Resource amount should increase by consumption amount.");
+    }
+
+    [Test]
+    public async Task TryApplyDailyEffectsAsync_EffectForNonExistingResource_ShouldReturnFalse()
+    {
+        // Arrange
+        const string resourceId = "nonexistent";
+        const float effectAmount = 5f;
+
+        var effect = new ResourceEffect
+        {
+            ResourceId = resourceId,
+            Amount = effectAmount,
+            IsProduction = false //Consumption
+        };
+
+        // Act
+        bool result = await _service.TryApplyResourceEffectAsync(effect, CancellationToken.None);
+        float resultAmount = _service.GetCurrentBalance()["wood"];
+
+        // Assert
+        Assert.That(result, Is.False, "Method should return false for non-existing resource.");
     }
 
     [Test]
@@ -298,6 +399,32 @@ public class SettlementResourcesServiceTest
         Assert.That(balance.Keys, Is.EquivalentTo(new[] { "wood", "stone" }));
         Assert.That(balance["wood"], Is.EqualTo(0));
         Assert.That(balance["stone"], Is.EqualTo(0));
+    }
+
+    [Test]
+    public async Task TryApplyDailyEffectsAsync_CancelledToken_ShouldThrowOperationCanceledException()
+    {
+        // Arrange
+        const string resourceId = "wood";
+        const float initialAmount = 10f;
+        const float effectAmount = 5f;
+
+        await _service.SetResourceAsync(resourceId, initialAmount);
+
+        var effect = new ResourceEffect
+        {
+            ResourceId = resourceId,
+            Amount = effectAmount,
+            IsProduction = true
+        };
+
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        // Act & Assert
+        Assert.That(async () => await _service.TryApplyResourceEffectAsync(effect, cts.Token),
+            Throws.InstanceOf<OperationCanceledException>(),
+            "Method should propagate cancellation if OnResourcesChanged supports it.");
     }
 
     [Test]

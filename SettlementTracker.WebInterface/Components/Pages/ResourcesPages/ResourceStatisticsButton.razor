@@ -1,7 +1,4 @@
-﻿@using System.ComponentModel.Design
-@using SettlementTracker.Core.Managers
-@using SettlementTracker.WebInterface.Data.Services
-
+﻿@using SettlementTracker.Core.Services
 @inject ILogger<ResourceStatisticsButton> Logger
 
 <button @onclick="ToggleStatistics" class="btn btn-outline-info position-relative">
@@ -17,7 +14,9 @@
 
 @code {
     [Inject] private ISettlementResourcesService StatisticsService { get; set; } = default!;
-    [CascadingParameter(Name = "ResourcesStatisticsPanel")] private ResourcesStatisticsPanel StatisticsPanel { get; set; }
+
+[CascadingParameter(Name = "ResourcesStatisticsPanel")]
+private ResourcesStatisticsPanel StatisticsPanel { get; set; }
 
     private bool HasNewData { get; set; }
 
@@ -38,7 +37,8 @@
             await StatisticsPanel.ShowAsync();
             HasNewData = false;
         }
-        Logger.LogInformation("ToggleStatistics finished");
+
+    Logger.LogInformation("ToggleStatistics finished");
     }
 
 }
