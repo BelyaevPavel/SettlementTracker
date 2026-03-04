@@ -29,7 +29,7 @@ namespace SettlementTracker.Core.Services
             _directoryName = Path.GetDirectoryName(Path.GetFullPath(_stateFilePath));
             _resources = new Dictionary<string, float>();
             _definitions = new Dictionary<string, ResourceDefinition>();
-            LoadDefinitionsAsync().Wait();
+            LoadDefinitions();
         }
 
         public ILogger<SettlementResourcesService>? Logger { get; set; }
@@ -246,6 +246,18 @@ namespace SettlementTracker.Core.Services
             }
 
             await OnResourcesChanged(cancellationToken);
+        }
+
+        private void LoadDefinitions()
+        {
+            _definitions = _definitionRepository.LoadResourceDefinitions();
+
+            lock (_lock)
+            {
+                _resources = new Dictionary<string, float>();
+                foreach (ResourceDefinition resourceDef in _definitions.Values)
+                    _resources[resourceDef.Id] = 0;
+            }
         }
 
         private async Task OnResourcesChanged(CancellationToken cancellationToken = default)
