@@ -1,7 +1,6 @@
-﻿@inherits LayoutComponentBase
-
-@using BlazorBootstrap
+﻿@using BlazorBootstrap
 @using SettlementTracker.WebInterface.Components.Pages.ResourcesPages
+@inherits LayoutComponentBase
 
 <BlazorBootstrapLayout StickyHeader="true">
     <HeaderSection>
@@ -25,6 +24,8 @@
 </BlazorBootstrapLayout>
 
 <ResourcesStatisticsPanel @ref="_resourceStatistics"/>
+
+<Toasts AutoHide="true"/>
 
 @code
 {

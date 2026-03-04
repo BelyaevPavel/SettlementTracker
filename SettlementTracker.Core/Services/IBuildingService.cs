@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using SettlementTracker.Core.Models.Definitions;
 using SettlementTracker.Core.Models.Entities;
@@ -15,8 +16,12 @@ namespace SettlementTracker.Core.Services
         Task<Building?> GetBuildingAsync(Guid id);
         Task<bool> IsBuildingBuiltAsync(string definitionId);
 
-        Task<Building> BuildAsync(string definitionId, (int X, int Y) position);
-        Task<bool> DemolishAsync(Guid buildingId);
+        Task<bool> TryBuildAsync(string definitionId, (int X, int Y) position,
+            CancellationToken cancellationToken = default);
+
+        Task<bool> TryDemolishAsync(Guid buildingId,
+            CancellationToken cancellationToken = default);
+
         Task<bool> ToggleActiveAsync(Guid buildingId);
 
         Task<bool> AssignCitizenAsync(Guid buildingId, Guid citizenId);
@@ -25,8 +30,7 @@ namespace SettlementTracker.Core.Services
         Task SaveChangesAsync();
         Task LoadFromFileAsync();
 
-        Task<bool> CanAffordBuildAsync(string definitionId);
-        Task<bool> TrySpendResourcesForBuildAsync(string definitionId);
+        bool CanAffordBuild(string definitionId);
 
         public event EventHandler? BuildingChange;
     }

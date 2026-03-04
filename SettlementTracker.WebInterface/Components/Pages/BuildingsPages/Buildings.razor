@@ -52,12 +52,12 @@
 
     private Task Build(string buildingDefinitionId)
     {
-        return BuildingService.BuildAsync(buildingDefinitionId, (0, 0));
+        return BuildingService.TryBuildAsync(buildingDefinitionId, (0, 0));
     }
 
     private Task Demolish(Guid buildingId)
     {
-        return BuildingService.DemolishAsync(buildingId);
+        return BuildingService.TryDemolishAsync(buildingId);
     }
 
 }

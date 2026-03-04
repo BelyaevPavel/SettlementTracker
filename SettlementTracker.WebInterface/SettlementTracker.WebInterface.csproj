@@ -7,16 +7,22 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\SettlementTracker.Core\SettlementTracker.Core.csproj" />
+        <ProjectReference Include="..\SettlementTracker.Core\SettlementTracker.Core.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Blazor.Bootstrap" Version="3.5.0" />
+        <PackageReference Include="Blazor.Bootstrap" Version="3.5.0"/>
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="wwwroot\bootstrap\js\" />
-      <Folder Include="wwwroot\images\" />
+        <Folder Include="wwwroot\bootstrap\js\"/>
+        <Folder Include="wwwroot\images\"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Content Update="wwwroot\**">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
     </ItemGroup>
 
 </Project>

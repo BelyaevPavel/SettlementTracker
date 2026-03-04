@@ -66,11 +66,11 @@ else
 
     private Task Build()
     {
-        return BuildingService.BuildAsync(BuildingDefinition.Id, (0, 0));
+        return BuildingService.TryBuildAsync(BuildingDefinition.Id, (0, 0));
     }
 
     private Task Demolish()
     {
-        return BuildingService.DemolishAsync(Building.Id);
+        return BuildingService.TryDemolishAsync(Building.Id);
     }
 }
