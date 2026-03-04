@@ -1,11 +1,14 @@
 ﻿@page "/buildings_alt"
-
 @using BlazorBootstrap
+@using SettlementTracker.Core.Managers
 @using SettlementTracker.Core.Models.Definitions
 @using SettlementTracker.Core.Models.Entities
 @using SettlementTracker.Core.Services
 
 @inject IBuildingService BuildingService
+@inject ISettlementResourcesService ResourcesService
+@inject ILogger<Buildings_alt> Logger
+@inject ToastService ToastService
 
 @rendermode InteractiveServer
 
@@ -16,40 +19,117 @@
 <div class="row">
     @if (_builtBuildings != null)
     {
-        @foreach (var building in _builtBuildings)
+        @foreach (Building building in _builtBuildings)
         {
-            <Card Class="col-lg-3 col-md-4 col-sm-6 col-xs-12 mb-4">
-                <img class="rounded-top" src="/images/@building.Definition.PictureName" alt="placeholder"/>
-                <CardBody>
-                    <CardTitle>@building.Definition.Name</CardTitle>
-                    <CardSubTitle Class="mb-2 text-muted">Стоимость постройки 20 древесины</CardSubTitle>
-                    <CardText>
-                        @building.Definition.Description
-                    </CardText>
-                </CardBody>
-                <CardFooter>
-                    <Button Color="ButtonColor.Danger" @onclick="@(() => Demolish(building.Id))">Снести</Button>
-                </CardFooter>
-            </Card>
+            if (building == null)
+            {
+                <p>Ошибка: здание не загружено</p>
+            }
+            else if (building.Definition == null)
+            {
+                <p>Ошибка: определение здания не загружено для @building.Id</p>
+            }
+            else
+            {
+                <Card Class="col-lg-3 col-md-4 col-sm-6 col-xs-12 mb-4">
+                    <img class="rounded-top" src="/images/@building.Definition.PictureName" alt="placeholder"/>
+                    <CardBody>
+                        <CardTitle>@building.Definition.Name</CardTitle>
+                        <CardSubTitle Class="mb-2 text-muted">
+                            Стоимость постройки:
+                            @if (building.Definition.BuildCost != null)
+                            {
+                                @foreach (ResourceEffect? resource in building.Definition.BuildCost)
+                                {
+                                    if (resource == null)
+                                    {
+                                        <Badge Color="BadgeColor.Warning">Ресурс не определён</Badge>
+                                    }
+                                    else if (_resourceDefinitions.TryGetValue(resource.ResourceId, out ResourceDefinition? resDef))
+                                    {
+                                        <Badge Color="BadgeColor.Secondary" Class="me-1">
+                                            @resource.Amount @resDef.Name
+                                        </Badge>
+                                    }
+                                    else
+                                    {
+                                        <Badge Color="BadgeColor.Warning">Неизвестный ресурс</Badge>
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                <span>Стоимость не указана</span>
+                            }
+                        </CardSubTitle>
+                        <CardText>
+                            @building.Definition.Description
+                        </CardText>
+                    </CardBody>
+                    <CardFooter>
+                        <Button Color="ButtonColor.Danger" @onclick="@(async () => await DemolishAsync(building.Id))">
+                            Снести
+                        </Button>
+                    </CardFooter>
+                </Card>
+            }
         }
     }
     @if (_availableDefinitions != null)
     {
-        @foreach (var definition in _availableDefinitions)
+        @foreach (BuildingDefinition definition in _availableDefinitions)
         {
-            <Card Class="col-lg-3 col-md-4 col-sm-6 col-xs-12 mb-4">
-                <img class="rounded-top" src="/images/@definition.PictureName" alt="placeholder"/>
-                <CardBody>
-                    <CardTitle>@definition.Name</CardTitle>
-                    <CardSubTitle Class="mb-2 text-muted">Стоимость постройки 20 древесины</CardSubTitle>
-                    <CardText>
-                        @definition.Description
-                    </CardText>
-                </CardBody>
-                <CardFooter>
-                    <Button Color="ButtonColor.Primary" @onclick="@(() => Build(definition.Id))">Построить</Button>
-                </CardFooter>
-            </Card>
+            @if (definition == null)
+            {
+                <p>Ресурсы не загружены</p>
+            }
+            else
+            {
+                <Card Class="col-lg-3 col-md-4 col-sm-6 col-xs-12 mb-4">
+                    <img class="rounded-top" src="/images/@definition.PictureName" alt="placeholder"/>
+                    <CardBody>
+                        <CardTitle>@definition.Name</CardTitle>
+                        <CardSubTitle Class="mb-2 text-muted">
+                            Стоимость постройки:
+                            @if (definition.BuildCost != null)
+                            {
+                                @foreach (ResourceEffect? resource in definition.BuildCost)
+                                {
+                                    if (resource == null)
+                                    {
+                                        <Badge Color="BadgeColor.Warning">Ресурс не определён</Badge>
+                                    }
+                                    else if (_resourceDefinitions.TryGetValue(resource.ResourceId, out ResourceDefinition? resDef))
+                                    {
+                                        <Badge Color="BadgeColor.Secondary" Class="me-1">
+                                            @resource.Amount @resDef.Name
+                                        </Badge>
+                                    }
+                                    else
+                                    {
+                                        <Badge Color="BadgeColor.Warning">Неизвестный ресурс</Badge>
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                <span>Стоимость не указана</span>
+                            }
+                        </CardSubTitle>
+                        <CardText>
+                            @definition.Description
+                        </CardText>
+                    </CardBody>
+                    <CardFooter>
+                        <Button
+                            Color="ButtonColor.Primary"
+                            disabled="@(!BuildingService.CanAffordBuild(definition.Id))"
+                            @onclick="@(async () => await BuildAsync(definition.Id))">
+                            Построить
+                        </Button>
+                    </CardFooter>
+                </Card>
+            }
         }
     }
 </div>
@@ -58,28 +138,116 @@
     private IEnumerable<Building>? _builtBuildings;
     private IEnumerable<BuildingDefinition>? _availableDefinitions;
     private bool _showAlreadyBuilt = false;
+    private IReadOnlyDictionary<string, ResourceDefinition> _resourceDefinitions = new Dictionary<string, ResourceDefinition>();
 
     protected override async Task OnInitializedAsync()
     {
+        Logger?.LogDebug("Building_alt OnInitializedAsync entered");
         await LoadDataAsync();
+        ResourcesService.ResourcesChanged += OnResourceChanged;
+        BuildingService.BuildingChange += OnBuildingsChanged;
+        Logger?.LogDebug("Building_alt OnInitializedAsync exit");
+    }
+
+    private void OnBuildingsChanged(object? sender, EventArgs e)
+    {
+        Logger?.LogDebug("Building_alt OnBuildingsChanged entered");
+        _ = InvokeAsync(StateHasChanged);
+        Logger?.LogDebug("Building_alt OnBuildingsChanged exit");
+    }
+
+    private void OnResourceChanged(object? sender, ResourcesChangedEventArgs e)
+    {
+        Logger?.LogDebug("Building_alt OnResourceChanged entered");
+        _ = InvokeAsync(StateHasChanged);
+        Logger?.LogDebug("Building_alt OnResourceChanged exit");
     }
 
     private async Task LoadDataAsync()
     {
+        Logger?.LogDebug("Building_alt LoadDataAsync entered");
         await BuildingService.LoadFromFileAsync();
         _builtBuildings = await BuildingService.GetBuiltBuildingsAsync();
+        if (_builtBuildings == null)
+        {
+            Logger?.LogError("_builtBuildings is null");
+            throw new ArgumentNullException(nameof(_builtBuildings));
+        }
+
         _availableDefinitions = await BuildingService.GetAvailableDefinitionsAsync();
+        if (_availableDefinitions == null)
+        {
+            Logger?.LogError("_availableDefinitions is null");
+            throw new ArgumentNullException(nameof(_availableDefinitions));
+        }
+
+        _resourceDefinitions = ResourcesService.GetResourceDefinitions();
+        if (_resourceDefinitions == null)
+        {
+            Logger?.LogError("_resourceDefinitions is null");
+            throw new ArgumentNullException(nameof(_resourceDefinitions));
+        }
+
+        Logger?.LogDebug("Building_alt LoadDataAsync exit");
     }
 
 
-    private Task Build(string buildingDefinitionId)
+    private async Task BuildAsync(string buildingDefinitionId)
     {
-        return BuildingService.BuildAsync(buildingDefinitionId, (0, 0));
+        Logger?.LogDebug($"Build for {buildingDefinitionId} entered");
+        try
+        {
+            bool result = await BuildingService.TryBuildAsync(buildingDefinitionId, (0, 0));
+
+            if (result)
+            {
+                ToastService.Notify(new ToastMessage(ToastType.Success, "Успех!", "Здание успешно построено."));
+            }
+            else
+            {
+                ToastService.Notify(new ToastMessage(ToastType.Warning, "", "Не удалось построить", "", "Проверьте наличие ресурсов.", false));
+            }
+        }
+        catch (Exception e)
+        {
+            Logger?.LogError(e, "Ошибка при постройке здания");
+            ToastService.Notify(new ToastMessage(ToastType.Danger, "", "Ошибка", "", "Не удалось построить здание. Попробуйте ещё раз.", false));
+        }
+
+        Logger?.LogDebug($"Build for {buildingDefinitionId} exit");
     }
 
-    private Task Demolish(Guid buildingId)
+    private async Task DemolishAsync(Guid buildingId)
     {
-        return BuildingService.DemolishAsync(buildingId);
+        Logger?.LogDebug($"Build for {buildingId} entered");
+        try
+        {
+            bool result = await BuildingService.TryDemolishAsync(buildingId);
+
+            if (result)
+            {
+                ToastService.Notify(new ToastMessage(ToastType.Success, "Успех!", "Здание успешно снесено."));
+            }
+            else
+            {
+                ToastService.Notify(new ToastMessage(ToastType.Warning, "", "Не удалось снести", "", "Проверьте наличие ресурсов.", false));
+            }
+        }
+        catch (Exception e)
+        {
+            Logger?.LogError(e, "Ошибка при сносе здания");
+            ToastService.Notify(new ToastMessage(ToastType.Danger, "", "Ошибка", "", "Не удалось снести здание. Попробуйте ещё раз.", false));
+        }
+
+        Logger?.LogDebug($"Build for {buildingId} exit");
+    }
+
+    public void Dispose()
+    {
+        Logger?.LogDebug("Building_alt Dispose entered");
+        ResourcesService.ResourcesChanged -= OnResourceChanged;
+        BuildingService.BuildingChange -= OnBuildingsChanged;
+        Logger?.LogDebug("Building_alt Dispose exit");
     }
 
 }

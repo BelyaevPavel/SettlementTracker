@@ -16,8 +16,7 @@ public class Program
         builder.Logging.AddDebug(); // вывод в окно отладки
 
 // Установка минимального уровня логирования для всего приложения
-// TODO: Change to Error before pull-request
-        builder.Logging.SetMinimumLevel(LogLevel.Trace);
+        builder.Logging.SetMinimumLevel(LogLevel.Debug);
 
         builder.Services.AddBlazorBootstrap();
 
@@ -25,10 +24,14 @@ public class Program
         builder.Services.AddRazorComponents()
             .AddInteractiveServerComponents();
 
+        var jsonDefinitionRepository = new JsonDefinitionRepository("Data");
+
+        builder.Services.AddSingleton<IResourceDefinitionRepository>(jsonDefinitionRepository);
+        builder.Services.AddSingleton<IBuildingDefinitionRepository>(jsonDefinitionRepository);
+
         builder.Services.AddSingleton<ICitizenService, CitizenService>();
+        builder.Services.AddSingleton<ISettlementResourcesService, SettlementResourcesService>();
         builder.Services.AddSingleton<IBuildingService, BuildingService>();
-        builder.Services.AddSingleton<ISettlementResourcesService>(
-            new SettlementResourcesService(new JsonDefinitionRepository("Data")));
 
 
         WebApplication? app = builder.Build();

@@ -1,38 +1,57 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using SettlementTracker.Core.Models.Definitions;
 using SettlementTracker.Core.Models.Entities;
+using SettlementTracker.Core.Repositories;
 
 namespace SettlementTracker.Core.Services
 {
     public class BuildingService : IBuildingService
     {
-        private readonly string _buildingsStatePath = "State/builtBuildings.json";
-        private readonly string _definitionsPath = "Data/buildingDefinitions.json";
-        private List<Building> _builtBuildings = new();
-        private List<BuildingDefinition> _definitions = new();
+        private readonly IBuildingDefinitionRepository _buildingDefinitionRepository;
 
-        public BuildingService()
+        private readonly string _buildingsStatePath = "State/builtBuildings.json";
+
+        private readonly object _lock = new();
+
+        // private readonly string _definitionsPath = "Data/buildingDefinitions.json";
+        private readonly ISettlementResourcesService _resourcesService;
+        private List<Building> _builtBuildings = new();
+
+        private IReadOnlyDictionary<string, BuildingDefinition> _definitions =
+            new Dictionary<string, BuildingDefinition>();
+
+        public BuildingService(IBuildingDefinitionRepository buildingDefinitionRepository,
+            ISettlementResourcesService resourcesService, ILogger<BuildingService> logger)
         {
+            _buildingDefinitionRepository = buildingDefinitionRepository ??
+                                            throw new ArgumentNullException(nameof(buildingDefinitionRepository));
+            _resourcesService = resourcesService ?? throw new ArgumentNullException(nameof(resourcesService));
+            Logger = logger;
             if (!Directory.Exists("State"))
                 Directory.CreateDirectory("State");
             LoadDefinitions();
         }
 
+        public ILogger<BuildingService>? Logger { get; set; }
+
         public async Task<IEnumerable<BuildingDefinition>> GetAvailableDefinitionsAsync()
         {
             return await Task.FromResult(
-                _definitions.Where(d => !_builtBuildings.Select(b => b.DefinitionId).Contains(d.Id)));
+                _definitions.Values.Where(d => !_builtBuildings.Select(b => b.DefinitionId).Contains(d.Id)));
         }
 
-        public Task<BuildingDefinition?> GetDefinitionByIdAsync(string definitionId)
+        public async Task<BuildingDefinition?> GetDefinitionByIdAsync(string definitionId)
         {
-            return Task.FromResult(_definitions.FirstOrDefault(b => b.Id == definitionId));
+            return await Task.FromResult(_definitions.GetValueOrDefault(definitionId));
         }
 
         public async Task<IEnumerable<Building>> GetBuiltBuildingsAsync()
@@ -40,9 +59,9 @@ namespace SettlementTracker.Core.Services
             return await Task.FromResult(_builtBuildings);
         }
 
-        public Task<Building?> GetBuildingAsync(Guid id)
+        public async Task<Building?> GetBuildingAsync(Guid id)
         {
-            return Task.FromResult(_builtBuildings.FirstOrDefault(b => b.Id == id));
+            return await Task.FromResult(_builtBuildings.FirstOrDefault(b => b.Id == id));
         }
 
         public async Task<bool> IsBuildingBuiltAsync(string definitionId)
@@ -52,38 +71,86 @@ namespace SettlementTracker.Core.Services
             );
         }
 
-        public async Task<Building> BuildAsync(string definitionId, (int X, int Y) position)
+        public async Task<bool> TryBuildAsync(string definitionId, (int X, int Y) position,
+            CancellationToken cancellationToken = default)
         {
-            // Проверка, что здание еще не построено
-            if (await IsBuildingBuiltAsync(definitionId))
-                throw new InvalidOperationException($"Здание {definitionId} уже построено");
-
-            // Заглушка: проверка ресурсов
-            if (!await CanAffordBuildAsync(definitionId))
-                throw new InvalidOperationException("Недостаточно ресурсов");
-
-            // Заглушка: списание ресурсов
-            await TrySpendResourcesForBuildAsync(definitionId);
-
-            var building = new Building(Guid.NewGuid(), definitionId, position)
+            if (string.IsNullOrEmpty(definitionId) || string.IsNullOrWhiteSpace(definitionId))
             {
-                Definition = _definitions.FirstOrDefault(d => d.Id == definitionId)
-            };
+                Logger?.LogWarning("definitionId cannot be null or empty or whitespace.");
+                return false;
+            }
 
-            _builtBuildings.Add(building);
-            await SaveChangesAsync();
+            BuildingDefinition? buildingDefinition = _definitions.GetValueOrDefault(definitionId);
 
-            return building;
+            if (buildingDefinition == null)
+            {
+                Logger?.LogWarning("Building definition for {definitionId} not found", definitionId);
+                return false;
+            }
+
+            if (await IsBuildingBuiltAsync(definitionId))
+            {
+                Logger?.LogWarning("Здание {definitionId} уже построено", definitionId);
+                return false;
+            }
+
+            if (CanAffordBuild(definitionId))
+            {
+                lock (_lock)
+                {
+                    foreach (ResourceEffect resourceEffect in buildingDefinition.BuildCost)
+                        _resourcesService.TryApplyResourceEffectAsync(resourceEffect, cancellationToken);
+                    // .Wait(cancellationToken); // Wait here is bad but should be solved by replacing state saving on every change with autosave by timer and manual save)
+                }
+
+                var building = new Building(Guid.NewGuid(), definitionId, position)
+                {
+                    Definition = buildingDefinition
+                };
+
+                lock (_lock)
+                {
+                    _builtBuildings.Add(building);
+                }
+
+                await SaveChangesAsync();
+                OnBuildingsChanged();
+
+                return true;
+            }
+
+            Logger?.LogWarning("Недостаточно ресурсов для строительства {definitionId}", definitionId);
+            return false;
         }
 
-        public async Task<bool> DemolishAsync(Guid buildingId)
+        public async Task<bool> TryDemolishAsync(Guid buildingId,
+            CancellationToken cancellationToken = default)
         {
-            Building building = _builtBuildings.FirstOrDefault(b => b.Id == buildingId);
+            Building? building = _builtBuildings.FirstOrDefault(b => b.Id == buildingId);
             if (building == null) return false;
 
-            building.UnassignAllCitizens();
-            _builtBuildings.Remove(building);
+            if (building.Definition == null) return false;
+
+            lock (_lock)
+            {
+                foreach (ResourceEffect resourceEffect in building.Definition.BuildCost)
+                {
+                    var effect = new ResourceEffect
+                    {
+                        ResourceId = resourceEffect.ResourceId,
+                        Amount = resourceEffect.Amount,
+                        IsProduction = !resourceEffect.IsProduction
+                    };
+                    _resourcesService.TryApplyResourceEffectAsync(effect, cancellationToken);
+                    // .Wait(cancellationToken); // Wait here is bad but should be solved by replacing state saving on every change with autosave by timer and manual save)
+                }
+
+                building.UnassignAllCitizens();
+                _builtBuildings.Remove(building);
+            }
+
             await SaveChangesAsync();
+            OnBuildingsChanged();
 
             return true;
         }
@@ -138,34 +205,56 @@ namespace SettlementTracker.Core.Services
 
                 // Восстанавливаем ссылки на определения
                 foreach (Building building in buildings)
-                    building.Definition = _definitions.FirstOrDefault(d => d.Id == building.DefinitionId);
+                    building.Definition = _definitions.GetValueOrDefault(building.DefinitionId);
 
                 _builtBuildings = buildings;
             }
         }
 
-        public async Task<bool> CanAffordBuildAsync(string definitionId)
+        public bool CanAffordBuild(string definitionId)
         {
-            // TODO: Реализовать проверку ресурсов
-            return true; // Пока всегда true
-        }
+            if (string.IsNullOrEmpty(definitionId) || string.IsNullOrWhiteSpace(definitionId))
+            {
+                Logger?.LogWarning("definitionId cannot be null or empty or whitespace.");
+                return false;
+            }
 
-        public async Task<bool> TrySpendResourcesForBuildAsync(string definitionId)
-        {
-            // TODO: Реализовать списание ресурсов
-            return true; // Пока всегда true
+            BuildingDefinition? buildingDefinition = _definitions.GetValueOrDefault(definitionId);
+
+            if (buildingDefinition == null)
+            {
+                Logger?.LogWarning("Building definition for {definitionId} not found", definitionId);
+                return false;
+            }
+
+            var canAfford = true;
+            lock (_lock)
+            {
+                foreach (ResourceEffect resourceEffect in buildingDefinition.BuildCost)
+                    if (!_resourcesService.CanSpend(resourceEffect.ResourceId, resourceEffect.Amount))
+                    {
+                        canAfford = false;
+                        break;
+                    }
+            }
+
+            return canAfford;
         }
 
         public event EventHandler? BuildingChange;
 
+        private void OnBuildingsChanged()
+        {
+            BuildingChange?.Invoke(this, EventArgs.Empty);
+        }
+
         private void LoadDefinitions()
         {
-            if (File.Exists(_definitionsPath))
-            {
-                string json = File.ReadAllText(_definitionsPath);
-                _definitions = JsonSerializer.Deserialize<List<BuildingDefinition>>(json)
-                               ?? new List<BuildingDefinition>();
-            }
+            _definitions = _buildingDefinitionRepository.LoadBuildingDefinitions();
+            if (_definitions == null) throw new ArgumentNullException(nameof(_definitions));
+
+            if (_definitions.Count == 0)
+                throw new ArgumentException("Can't be an empty collection", nameof(_definitions));
         }
     }
 
