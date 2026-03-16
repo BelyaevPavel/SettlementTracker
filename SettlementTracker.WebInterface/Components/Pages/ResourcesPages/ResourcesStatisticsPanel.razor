@@ -2,7 +2,6 @@
 
 @inject ISettlementResourcesService ResourceService
 @inject ILogger<ResourcesStatisticsPanel> Logger
-
 @using BlazorBootstrap
 @using SettlementTracker.Core.Managers
 @using SettlementTracker.Core.Models.Definitions
@@ -106,15 +105,15 @@
 
     public EventCallback OnShown { get; set; }
 
-private async Task OnShowOffcanvasClick()
-{
-await _offcanvas.ShowAsync();
-}
+    private async Task OnShowOffcanvasClick()
+    {
+        await _offcanvas.ShowAsync();
+    }
 
-private async Task OnHideOffcanvasClick()
-{
-await _offcanvas.HideAsync();
-}
+    private async Task OnHideOffcanvasClick()
+    {
+        await _offcanvas.HideAsync();
+    }
 
     private List<DisplayResource> _resources = new();
 
@@ -132,8 +131,11 @@ await _offcanvas.HideAsync();
 
     private void OnResourcesChanged(object? sender, ResourcesChangedEventArgs e)
     {
-        OnUpdate();
-        StateHasChanged();
+        _ = InvokeAsync(() =>
+        {
+            OnUpdate();
+            StateHasChanged();
+        });
     }
 
     private void OnUpdate()
@@ -148,15 +150,15 @@ await _offcanvas.HideAsync();
     {
         _resources.Clear();
 
-    foreach (KeyValuePair<string, float> resourceData in _resourcesBalance)
+        foreach (KeyValuePair<string, float> resourceData in _resourcesBalance)
         {
-        if (!_resourcesDefinitions.TryGetValue(resourceData.Key, out ResourceDefinition? definition))
+            if (!_resourcesDefinitions.TryGetValue(resourceData.Key, out ResourceDefinition? definition))
             {
                 Logger.LogWarning($"Nonexistent definition {definition} requested");
                 continue;
             }
 
-        _resources.Add(new DisplayResource
+            _resources.Add(new DisplayResource
             {
                 Id = resourceData.Key,
                 Icon = definition.IconPath,
