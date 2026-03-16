@@ -1,14 +1,16 @@
 ﻿@page "/buildings_alt"
-@using BlazorBootstrap
-@using SettlementTracker.Core.Managers
-@using SettlementTracker.Core.Models.Definitions
-@using SettlementTracker.Core.Models.Entities
-@using SettlementTracker.Core.Services
 
 @inject IBuildingService BuildingService
 @inject ISettlementResourcesService ResourcesService
 @inject ILogger<Buildings_alt> Logger
 @inject ToastService ToastService
+
+@using BlazorBootstrap
+@using SettlementTracker.Core.Managers
+@using SettlementTracker.Core.Models.Definitions
+@using SettlementTracker.Core.Models.Entities
+@using SettlementTracker.Core.Services
+@implements IDisposable
 
 @rendermode InteractiveServer
 
@@ -152,7 +154,11 @@
     private void OnBuildingsChanged(object? sender, EventArgs e)
     {
         Logger?.LogDebug("Building_alt OnBuildingsChanged entered");
-        _ = InvokeAsync(StateHasChanged);
+        _ = InvokeAsync(async () =>
+        {
+            await LoadDataAsync();
+            StateHasChanged();
+        });
         Logger?.LogDebug("Building_alt OnBuildingsChanged exit");
     }
 

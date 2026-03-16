@@ -1,10 +1,12 @@
 ﻿@page "/citizens"
-@using SettlementTracker.Core.Models.Entities
-@using SettlementTracker.Core.Models.Enums
-@using BlazorBootstrap;
-@using SettlementTracker.Core.Services
 
 @inject ICitizenService CitizenService
+
+@using BlazorBootstrap
+@using SettlementTracker.Core.Models.Entities
+@using SettlementTracker.Core.Models.Enums
+@using SettlementTracker.Core.Services
+@implements IDisposable
 
 @rendermode InteractiveServer
 
@@ -56,7 +58,7 @@ else
             </tr>
             </thead>
             <tbody>
-            @foreach (var citizen in _citizens)
+            @foreach (Citizen citizen in _citizens)
             {
                 <tr>
                     <td>@citizen.Name</td>
@@ -248,8 +250,8 @@ else
 @code {
     Random _random;
     private IEnumerable<Citizen>? _citizens;
-    private bool _showEditDialog = false;
-    private bool _showGenerateDialog = false;
+    private bool _showEditDialog;
+    private bool _showGenerateDialog;
     private Citizen _editingCitizen = new(Guid.NewGuid(), "", Gender.Male, 0);
 
     private float _childRatio;
@@ -266,28 +268,32 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        _random = new Random(DateTime.Now.Millisecond);
         CitizenService.CitizensChange += OnCitizensChanged;
 
         await CitizenService.LoadFromFileAsync();
-        _citizens = await CitizenService.GetCitizensAsync();
-        _random = new(DateTime.Now.Millisecond);
 
-        UpdateStatistics();
+        await UpdateStatistics();
     }
 
     private void OnCitizensChanged(object? sender, EventArgs e)
     {
-        UpdateStatistics();
+        _ = InvokeAsync(async () =>
+        {
+            await UpdateStatistics();
+            StateHasChanged();
+        });
     }
 
-    private void UpdateStatistics()
+    private async Task UpdateStatistics()
     {
+        _citizens = await CitizenService.GetCitizensAsync();
         if (_citizens == null)
         {
             return;
         }
 
-        var freeCitizens = _citizens.Where(x => !x.IsSlave);
+        IEnumerable<Citizen> freeCitizens = _citizens.Where(x => !x.IsSlave);
 
         float citizensCount = _citizens.Count();
         _childRatio = freeCitizens.Count(x => x.AgeCategory == AgeCategory.Child) / citizensCount * 100;
@@ -359,7 +365,7 @@ else
 
     private async Task GenerateCitizens()
     {
-        for (int i = 0; i < _generationAmount; i++)
+        for (var i = 0; i < _generationAmount; i++)
         {
             Citizen generatedCitizen = GenerateCitizen();
             await CitizenService.AddCitizenAsync(generatedCitizen);
@@ -429,12 +435,10 @@ else
 
         if (gender == Gender.Male)
         {
-            return String.Format("{0} {1}", humanMaleNames[_random.Next(humanFemaleNames.Count)], humanMaleNicknames[_random.Next(humanMaleNicknames.Count)]);
+            return string.Format("{0} {1}", humanMaleNames[_random.Next(humanFemaleNames.Count)], humanMaleNicknames[_random.Next(humanMaleNicknames.Count)]);
         }
-        else
-        {
-            return String.Format("{0} {1}", humanFemaleNames[_random.Next(humanFemaleNames.Count)], humanFemaleNicknames[_random.Next(humanFemaleNicknames.Count)]);
-        }
+
+        return string.Format("{0} {1}", humanFemaleNames[_random.Next(humanFemaleNames.Count)], humanFemaleNicknames[_random.Next(humanFemaleNicknames.Count)]);
     }
 
     private string GenerateGoblinName(Gender gender)
@@ -480,12 +484,10 @@ else
 
         if (gender == Gender.Male)
         {
-            return String.Format("{0} {1} {2}", goblinMaleTitles[_random.Next(goblinMaleTitles.Count)], goblinMaleNames[_random.Next(goblinMaleNames.Count)], goblinClanNames[_random.Next(goblinClanNames.Count)]);
+            return string.Format("{0} {1} {2}", goblinMaleTitles[_random.Next(goblinMaleTitles.Count)], goblinMaleNames[_random.Next(goblinMaleNames.Count)], goblinClanNames[_random.Next(goblinClanNames.Count)]);
         }
-        else
-        {
-            return String.Format("{0} {1} {2}", goblinFemaleTitles[_random.Next(goblinFemaleTitles.Count)], goblinFemaleNames[_random.Next(goblinFemaleNames.Count)], goblinClanNames[_random.Next(goblinClanNames.Count)]);
-        }
+
+        return string.Format("{0} {1} {2}", goblinFemaleTitles[_random.Next(goblinFemaleTitles.Count)], goblinFemaleNames[_random.Next(goblinFemaleNames.Count)], goblinClanNames[_random.Next(goblinClanNames.Count)]);
     }
 
     private Gender GenerateGender()
@@ -549,4 +551,10 @@ else
     }
 
     [Inject] private IJSRuntime JsRuntime { get; set; } = default!;
+
+    public void Dispose()
+    {
+        CitizenService.CitizensChange -= OnCitizensChanged;
+    }
+
 }
