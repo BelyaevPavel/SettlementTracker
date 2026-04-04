@@ -31,14 +31,15 @@
             {
                 <div class="row align-items-center mb-3 border-bottom pb-2">
                     <!-- Название и иконка -->
-                    <div class="col-12 col-md-4">
-                        <Image Src="@resource.Icon" Alt="placeholder"/>
-                        <span class="fw-bold">@resource.Name</span>
+                    <div class="col-12 col-md-4 resource-name">
+                        <Image Src="@resource.Icon" Alt="placeholder" @onclick="() => OpenEditModal(resource)"/>
+                        <span class="fw-bold" @onclick="() => OpenEditModal(resource)">@resource.Name</span>
                     </div>
 
                     <!-- Текущее количество -->
                     <div class="col-6 col-md-2 text-start text-md-end">
-                        <span class="fs-5">@resource.CurrentAmount</span>
+                        <span class="fs-5 resource-name"
+                              @onclick="() => OpenEditModal(resource)">@resource.CurrentAmount</span>
                     </div>
 
                     <!-- Изменение на следующий день -->
@@ -100,10 +101,41 @@
     </BodyTemplate>
 </Offcanvas>
 
+<!-- Модальное окно для изменения количества ресурса -->
+<Modal @ref="_editModal" Title="Изменить количество ресурса">
+    <BodyTemplate>
+        @if (_selectedResource != null)
+        {
+            <div class="text-center mb-3">
+                <Image Src="@_selectedResource.Icon" Alt="icon" Height="48"/>
+                <h5 class="mt-2">@_selectedResource.Name</h5>
+                <p class="text-muted">Текущее количество: <strong>@_selectedResource.CurrentAmount</strong></p>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Новое количество:</label>
+                <div class="input-group">
+                    <Button Color="ButtonColor.Danger" @onclick="() => AdjustAmount(-1)">-1</Button>
+                    <input type="number" min="0" step="1" class="form-control text-center"
+                           @bind="_newAmount" @bind:event="oninput"/>
+                    <Button Color="ButtonColor.Success" @onclick="() => AdjustAmount(+1)">+1</Button>
+                </div>
+            </div>
+        }
+    </BodyTemplate>
+    <FooterTemplate>
+        <Button Color="ButtonColor.Secondary" @onclick="CloseEditModal">Отмена</Button>
+        <Button Color="ButtonColor.Primary" @onclick="SaveResourceAmount">Сохранить</Button>
+    </FooterTemplate>
+</Modal>
+
 @code {
     private Offcanvas _offcanvas = default!;
+    private Modal _editModal = default!;
 
     public EventCallback OnShown { get; set; }
+
+    private DisplayResource? _selectedResource;
+    private float _newAmount;
 
     private async Task OnShowOffcanvasClick()
     {
@@ -201,6 +233,40 @@
         catch (Exception e)
         {
             Logger.LogError(e, $"Failed to decrement resource {resourceId}", resourceId);
+        }
+    }
+
+    private async Task OpenEditModal(DisplayResource resource)
+    {
+        _selectedResource = resource;
+        _newAmount = resource.CurrentAmount;
+        await _editModal.ShowAsync();
+    }
+
+    private async Task CloseEditModal()
+    {
+        await _editModal.HideAsync();
+        _selectedResource = null;
+    }
+
+    private void AdjustAmount(float delta)
+    {
+        _newAmount += delta;
+        if (_newAmount < 0) _newAmount = 0;
+    }
+
+    private async Task SaveResourceAmount()
+    {
+        if (_selectedResource == null) return;
+
+        try
+        {
+            await ResourceService.SetResourceAsync(_selectedResource.Id, _newAmount);
+            await CloseEditModal();
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, $"Failed to set resource {_selectedResource.Id} to {_newAmount}");
         }
     }
 
